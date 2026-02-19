@@ -1,16 +1,16 @@
-const CACHE_NAME = 'golf-gps-v1';
+const CACHE_NAME = 'golf-gps-v2';
 
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/css/style.css',
-  '/js/distance.js',
-  '/js/storage.js',
-  '/js/course-data.js',
-  '/js/gps.js',
-  '/js/shot-tracker.js',
-  '/js/app.js',
-  '/manifest.json'
+  './',
+  './index.html',
+  './css/style.css',
+  './js/distance.js',
+  './js/storage.js',
+  './js/course-data.js',
+  './js/gps.js',
+  './js/shot-tracker.js',
+  './js/app.js',
+  './manifest.json'
 ];
 
 // Install — cache app shell
