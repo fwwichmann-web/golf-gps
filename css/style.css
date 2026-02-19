@@ -1,0 +1,599 @@
+/* === Golf GPS — Dark Theme, Mobile-First === */
+
+:root {
+  --bg-primary: #0f0f23;
+  --bg-card: #1a1a2e;
+  --bg-surface: #16213e;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666;
+  --accent-green: #00e676;
+  --accent-red: #ff5252;
+  --accent-yellow: #ffd740;
+  --accent-blue: #448aff;
+  --accent-orange: #ff9100;
+  --border: #2a2a4a;
+  --nav-height: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* === Screens === */
+.screen {
+  display: none;
+  height: calc(100vh - var(--nav-height) - var(--safe-bottom));
+  overflow-y: auto;
+  padding: 8px 12px 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.screen.active { display: block; }
+
+/* === Overlay === */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 35, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  text-align: center;
+}
+.overlay.hidden { display: none; }
+.overlay-content p { margin-top: 12px; font-size: 16px; }
+.overlay-content .small { font-size: 12px; color: var(--text-secondary); }
+
+.spinner {
+  width: 40px; height: 40px;
+  margin: 0 auto;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-green);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* === Hole Navigation Strip === */
+.hole-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 8px 4px;
+  margin-bottom: 8px;
+}
+.hole-nav-btn {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: none;
+  font-size: 20px;
+  width: 44px; height: 44px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hole-nav-btn:active { background: var(--accent-blue); }
+.hole-info { text-align: center; }
+.hole-number { font-size: 18px; font-weight: 700; display: block; }
+.hole-par, .hole-si { font-size: 12px; color: var(--text-secondary); margin: 0 6px; }
+.hole-yardage {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+/* === Green Distances === */
+.green-distances {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+  margin: 16px 0 20px;
+}
+.green-dist {
+  text-align: center;
+}
+.green-dist .label {
+  display: block;
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.green-dist .value {
+  display: block;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.green-dist.front .value,
+.green-dist.back .value {
+  font-size: 24px;
+  color: var(--text-secondary);
+}
+.green-dist.center .value {
+  font-size: 52px;
+  color: var(--accent-green);
+  line-height: 1;
+}
+
+/* === Section Labels === */
+.section-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin: 12px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* === Hazard List === */
+.hazard-list { margin-bottom: 8px; }
+.hazard-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+.hazard-icon {
+  width: 24px;
+  font-size: 14px;
+  text-align: center;
+}
+.hazard-icon.bunker { color: var(--accent-yellow); }
+.hazard-icon.water { color: var(--accent-blue); }
+.hazard-icon.ob { color: var(--accent-red); }
+.hazard-label { flex: 1; margin-left: 8px; font-size: 13px; }
+.hazard-dist {
+  font-weight: 700;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  min-width: 60px;
+  text-align: right;
+}
+.hazard-arrow {
+  width: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 16px;
+  margin-left: 6px;
+}
+
+.empty-msg {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 12px;
+  font-size: 12px;
+}
+
+/* === GPS Accuracy Bar === */
+.gps-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.gps-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.gps-dot.excellent { background: var(--accent-green); }
+.gps-dot.good { background: var(--accent-yellow); }
+.gps-dot.fair { background: var(--accent-orange); }
+.gps-dot.poor { background: var(--accent-red); animation: pulse 1.5s infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* === Buttons === */
+.btn-primary {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  background: var(--accent-green);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 56px;
+}
+.btn-primary:active { opacity: 0.8; }
+
+.btn-secondary {
+  padding: 12px 20px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-secondary:active { background: var(--border); }
+
+.btn-mark-shot { margin-top: 8px; }
+
+/* === Shot Tracker === */
+.tracker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-card);
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.shot-list { margin-bottom: 8px; }
+.shot-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+.shot-num {
+  width: 30px;
+  font-weight: 700;
+  color: var(--accent-blue);
+}
+.shot-club {
+  flex: 1;
+  color: var(--text-secondary);
+}
+.shot-distance {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Club Selector Grid */
+.club-selector { margin: 8px 0; }
+.club-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+.club-btn {
+  padding: 10px 4px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+.club-btn:active, .club-btn.selected {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
+}
+
+/* End Hole / Putts */
+.end-hole-section { margin: 8px 0; }
+.putt-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.btn-putt {
+  flex: 1;
+  padding: 14px 0;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-putt:active, .btn-putt.selected {
+  background: var(--accent-green);
+  color: #000;
+  border-color: var(--accent-green);
+}
+
+.tracker-actions {
+  margin: 12px 0;
+  text-align: center;
+}
+
+/* === Mini Scorecard === */
+.scorecard-mini {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scorecard-mini table, .scorecard-full table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.scorecard-mini th, .scorecard-mini td,
+.scorecard-full th, .scorecard-full td {
+  padding: 4px 6px;
+  text-align: center;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.scorecard-mini th, .scorecard-full th {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.score-over { color: var(--accent-red); }
+.score-under { color: var(--accent-green); }
+.score-even { color: var(--text-primary); }
+
+/* === Round Summary === */
+.summary-header {
+  text-align: center;
+  padding: 12px 0 8px;
+}
+.summary-header h2 { font-size: 18px; }
+.summary-course { color: var(--text-secondary); font-size: 13px; }
+.summary-date { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+
+.summary-score {
+  text-align: center;
+  margin: 16px 0;
+}
+.big-score {
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
+}
+.score-to-par {
+  font-size: 20px;
+  margin-top: 4px;
+}
+
+.summary-grid {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.summary-stat {
+  flex: 1;
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.stat-label { display: block; font-size: 10px; color: var(--text-secondary); text-transform: uppercase; }
+.stat-value { display: block; font-size: 22px; font-weight: 700; margin-top: 4px; }
+
+.club-stats { margin-bottom: 12px; }
+.club-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+.club-stat-name { font-weight: 600; }
+.club-stat-avg { color: var(--accent-green); font-weight: 700; }
+.club-stat-count { color: var(--text-secondary); font-size: 11px; }
+
+.summary-actions {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+.summary-actions .btn-primary,
+.summary-actions .btn-secondary {
+  flex: 1;
+}
+
+/* === Course Mapper === */
+.mapper-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+.mapper-title { font-size: 16px; font-weight: 700; }
+.mapper-hole-nav { display: flex; align-items: center; gap: 8px; }
+
+.mapper-map {
+  width: 100%;
+  height: 45vh;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+  margin: 8px 0;
+}
+
+.mapper-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.mapper-controls label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.mapper-controls select {
+  flex: 1;
+  padding: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.mapper-hazard-label {
+  margin: 6px 0;
+}
+.mapper-hazard-label input {
+  width: 100%;
+  padding: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.mapper-status {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 6px 0;
+}
+
+.mapper-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  margin: 6px 0;
+  font-size: 11px;
+}
+.mapper-check-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background: var(--bg-card);
+  border-radius: 4px;
+}
+.mapper-check-item.done { color: var(--accent-green); }
+.mapper-check-item.pending { color: var(--text-muted); }
+
+.mapper-actions {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+.mapper-actions .btn-primary,
+.mapper-actions .btn-secondary {
+  flex: 1;
+  min-width: 80px;
+  font-size: 12px;
+  padding: 10px 8px;
+}
+
+/* === Modal === */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+  padding: 20px;
+}
+.modal.hidden { display: none; }
+.modal-content {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  max-width: 340px;
+}
+.modal-content h3 { margin-bottom: 12px; }
+.modal-content label {
+  display: block;
+  margin: 10px 0 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.modal-content select,
+.modal-content input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.modal-content label input[type="checkbox"] {
+  margin-right: 6px;
+}
+.modal-actions { margin-top: 16px; text-align: right; }
+
+/* === Bottom Navigation === */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--nav-height) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 50;
+}
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  gap: 2px;
+  padding: 4px 0;
+}
+.nav-btn.active { color: var(--accent-green); }
+.nav-icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+/* === Utilities === */
+.hidden { display: none !important; }
+
+/* Scrollbar styling */
+.screen::-webkit-scrollbar { width: 4px; }
+.screen::-webkit-scrollbar-track { background: transparent; }
+.screen::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }

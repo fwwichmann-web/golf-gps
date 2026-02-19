@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f23">
+<title>Golf GPS — Atlantic Beach Links</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Loading / GPS Acquiring Overlay -->
+<div id="gps-overlay" class="overlay">
+  <div class="overlay-content">
+    <div class="spinner"></div>
+    <p>Acquiring GPS Signal...</p>
+    <p class="small" id="gps-overlay-msg">Move to an open area for best accuracy</p>
+  </div>
+</div>
+
+<!-- Screen: GPS Distances (default) -->
+<section id="screen-gps" class="screen active">
+  <!-- Hole Navigation Strip -->
+  <div class="hole-nav">
+    <button id="btn-prev-hole" class="hole-nav-btn">◄</button>
+    <div class="hole-info">
+      <span class="hole-number" id="hole-number">Hole 1</span>
+      <span class="hole-par" id="hole-par">Par 4</span>
+      <span class="hole-si" id="hole-si">SI 13</span>
+    </div>
+    <button id="btn-next-hole" class="hole-nav-btn">►</button>
+  </div>
+  <div class="hole-yardage" id="hole-yardage">White: 418m</div>
+
+  <!-- Green Distances -->
+  <div class="green-distances">
+    <div class="green-dist front">
+      <span class="label">FRONT</span>
+      <span class="value" id="dist-front">---</span>
+    </div>
+    <div class="green-dist center">
+      <span class="label">CENTER</span>
+      <span class="value" id="dist-center">---</span>
+    </div>
+    <div class="green-dist back">
+      <span class="label">BACK</span>
+      <span class="value" id="dist-back">---</span>
+    </div>
+  </div>
+
+  <!-- Hazards -->
+  <div class="section-label">HAZARDS</div>
+  <div id="hazard-list" class="hazard-list">
+    <div class="empty-msg">No hazards mapped for this hole</div>
+  </div>
+
+  <!-- GPS Accuracy -->
+  <div class="gps-bar">
+    <span class="gps-dot" id="gps-dot"></span>
+    <span id="gps-accuracy">GPS: Waiting...</span>
+  </div>
+
+  <!-- Mark Shot Button -->
+  <button id="btn-mark-shot" class="btn-primary btn-mark-shot">MARK SHOT</button>
+</section>
+
+<!-- Screen: Shot Tracker -->
+<section id="screen-tracker" class="screen">
+  <div class="tracker-header">
+    <span id="tracker-hole">Hole 1</span>
+    <span id="tracker-par">Par 4</span>
+    <span id="tracker-shots">Shots: 0</span>
+  </div>
+
+  <!-- Shot List -->
+  <div id="shot-list" class="shot-list">
+    <div class="empty-msg">No shots recorded. Go to GPS screen and tap MARK SHOT.</div>
+  </div>
+
+  <!-- Club Selector (shown after marking a shot) -->
+  <div id="club-selector" class="club-selector hidden">
+    <div class="section-label">SELECT CLUB</div>
+    <div id="club-buttons" class="club-grid"></div>
+  </div>
+
+  <!-- End Hole -->
+  <div id="end-hole-section" class="end-hole-section hidden">
+    <div class="section-label">PUTTS</div>
+    <div class="putt-buttons">
+      <button class="btn-putt" data-putts="0">0</button>
+      <button class="btn-putt" data-putts="1">1</button>
+      <button class="btn-putt" data-putts="2">2</button>
+      <button class="btn-putt" data-putts="3">3</button>
+      <button class="btn-putt" data-putts="4">4+</button>
+    </div>
+  </div>
+
+  <div class="tracker-actions">
+    <button id="btn-end-hole" class="btn-secondary">END HOLE</button>
+  </div>
+
+  <!-- Running Scorecard -->
+  <div class="section-label">SCORECARD</div>
+  <div id="running-scorecard" class="scorecard-mini"></div>
+</section>
+
+<!-- Screen: Round Summary -->
+<section id="screen-summary" class="screen">
+  <div class="summary-header">
+    <h2>Round Summary</h2>
+    <div class="summary-course">Atlantic Beach Links</div>
+    <div class="summary-date" id="summary-date"></div>
+  </div>
+
+  <div class="summary-score" id="summary-score">
+    <div class="big-score">--</div>
+    <div class="score-to-par">--</div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-stat">
+      <span class="stat-label">Front 9</span>
+      <span class="stat-value" id="summary-front">--</span>
+    </div>
+    <div class="summary-stat">
+      <span class="stat-label">Back 9</span>
+      <span class="stat-value" id="summary-back">--</span>
+    </div>
+    <div class="summary-stat">
+      <span class="stat-label">Putts</span>
+      <span class="stat-value" id="summary-putts">--</span>
+    </div>
+  </div>
+
+  <div class="section-label">CLUB DISTANCES</div>
+  <div id="club-stats" class="club-stats"></div>
+
+  <div class="section-label">SCORECARD</div>
+  <div id="full-scorecard" class="scorecard-full"></div>
+
+  <div class="summary-actions">
+    <button id="btn-new-round" class="btn-primary">NEW ROUND</button>
+    <button id="btn-share-round" class="btn-secondary">COPY SUMMARY</button>
+  </div>
+</section>
+
+<!-- Screen: Course Mapper (Admin) -->
+<section id="screen-mapper" class="screen">
+  <div class="mapper-header">
+    <span class="mapper-title">Course Mapper</span>
+    <div class="mapper-hole-nav">
+      <button id="mapper-prev" class="hole-nav-btn">◄</button>
+      <span id="mapper-hole-num">Hole 1</span>
+      <button id="mapper-next" class="hole-nav-btn">►</button>
+    </div>
+  </div>
+
+  <div id="mapper-map" class="mapper-map"></div>
+
+  <div class="mapper-controls">
+    <label>Placing:</label>
+    <select id="mapper-mode">
+      <option value="green-front">Green Front</option>
+      <option value="green-center" selected>Green Center</option>
+      <option value="green-back">Green Back</option>
+      <option value="tee">Tee Box</option>
+      <option value="hazard-bunker">Hazard: Bunker</option>
+      <option value="hazard-water">Hazard: Water</option>
+      <option value="hazard-ob">Hazard: OB</option>
+      <option value="layup">Layup Point</option>
+      <option value="dogleg">Dogleg Aim</option>
+    </select>
+  </div>
+
+  <div id="mapper-hazard-label" class="mapper-hazard-label hidden">
+    <input type="text" id="mapper-hazard-name" placeholder="Hazard label (e.g. RHS Bunker)">
+  </div>
+
+  <div class="mapper-status" id="mapper-status">
+    <span id="mapper-progress">0/18 holes mapped</span>
+  </div>
+
+  <div class="mapper-checklist" id="mapper-checklist"></div>
+
+  <div class="mapper-actions">
+    <button id="btn-mapper-save" class="btn-primary">SAVE</button>
+    <button id="btn-mapper-export" class="btn-secondary">EXPORT JSON</button>
+    <button id="btn-mapper-import" class="btn-secondary">IMPORT</button>
+    <input type="file" id="mapper-import-file" accept=".json" class="hidden">
+  </div>
+</section>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Settings</h3>
+    <label>Select Tee:</label>
+    <select id="setting-tee">
+      <option value="Yellow">Yellow (Championship)</option>
+      <option value="White" selected>White (Club)</option>
+      <option value="Blue">Blue (Member)</option>
+      <option value="Red">Red (Ladies)</option>
+    </select>
+    <label>
+      <input type="checkbox" id="setting-mapper-access"> Show Course Mapper
+    </label>
+    <div class="modal-actions">
+      <button id="btn-settings-close" class="btn-secondary">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-screen="screen-gps">
+    <svg viewBox="0 0 24 24" class="nav-icon"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+    <span>GPS</span>
+  </button>
+  <button class="nav-btn" data-screen="screen-tracker">
+    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h14v14zM19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z"/></svg>
+    <span>Track</span>
+  </button>
+  <button class="nav-btn" data-screen="screen-summary">
+    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+    <span>Summary</span>
+  </button>
+  <button class="nav-btn" data-screen="screen-mapper" id="nav-mapper" style="display:none;">
+    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5a.5.5 0 00.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5a.5.5 0 00-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+    <span>Map</span>
+  </button>
+  <button class="nav-btn" id="nav-settings">
+    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.6 3.6 0 0112 15.6z"/></svg>
+    <span>Settings</span>
+  </button>
+</nav>
+
+<!-- Scripts -->
+<script src="js/distance.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/course-data.js"></script>
+<script src="js/gps.js"></script>
+<script src="js/shot-tracker.js"></script>
+<script src="js/course-mapper.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

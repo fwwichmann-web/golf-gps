@@ -1,0 +1,75 @@
+/* === localStorage Abstraction === */
+
+const Storage = {
+  _get(key) {
+    try {
+      const val = localStorage.getItem(key);
+      return val ? JSON.parse(val) : null;
+    } catch (e) {
+      console.error('Storage read error:', key, e);
+      return null;
+    }
+  },
+
+  _set(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.error('Storage write error:', key, e);
+    }
+  },
+
+  // --- Course Coordinate Overrides ---
+
+  getMappedCoordinates(courseId) {
+    return this._get('course_' + courseId + '_coords');
+  },
+
+  saveMappedCoordinates(courseId, holes) {
+    this._set('course_' + courseId + '_coords', holes);
+  },
+
+  // --- Rounds ---
+
+  getRounds(courseId) {
+    const rounds = this._get('rounds') || [];
+    if (courseId) return rounds.filter(r => r.courseId === courseId);
+    return rounds;
+  },
+
+  saveRound(round) {
+    const rounds = this._get('rounds') || [];
+    const idx = rounds.findIndex(r => r.id === round.id);
+    if (idx >= 0) {
+      rounds[idx] = round;
+    } else {
+      rounds.push(round);
+    }
+    this._set('rounds', rounds);
+  },
+
+  getCurrentRound() {
+    return this._get('current_round');
+  },
+
+  saveCurrentRound(round) {
+    this._set('current_round', round);
+  },
+
+  clearCurrentRound() {
+    localStorage.removeItem('current_round');
+  },
+
+  // --- Settings ---
+
+  getSetting(key, defaultVal) {
+    const settings = this._get('settings') || {};
+    return settings[key] !== undefined ? settings[key] : defaultVal;
+  },
+
+  setSetting(key, value) {
+    const settings = this._get('settings') || {};
+    settings[key] = value;
+    this._set('settings', settings);
+  }
+};
