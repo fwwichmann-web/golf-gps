@@ -91,6 +91,34 @@ const ShotTracker = {
     return shot;
   },
 
+  /**
+   * If the last shot has no GPS position, update it once GPS is available.
+   * Called from GpsManager's position update callback.
+   */
+  updateLastShotGps(pos) {
+    if (!this.round || !pos) return false;
+    const holeData = this.getCurrentHoleData();
+    if (!holeData || holeData.shots.length === 0) return false;
+    const last = holeData.shots[holeData.shots.length - 1];
+    if (last.lat !== null) return false; // already has GPS
+
+    last.lat = pos.lat;
+    last.lng = pos.lng;
+
+    // Recalculate distance from previous shot
+    if (holeData.shots.length > 1) {
+      const prev = holeData.shots[holeData.shots.length - 2];
+      if (prev.lat && prev.lng) {
+        last.distanceFromPrevious = Math.round(
+          Distance.haversineMeters(prev.lat, prev.lng, pos.lat, pos.lng)
+        );
+      }
+    }
+
+    this._save();
+    return true;
+  },
+
   setClubForLastShot(club) {
     if (!this.round) return;
     const holeData = this.getCurrentHoleData();

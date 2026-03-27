@@ -135,6 +135,12 @@ const App = {
       document.getElementById('gps-overlay').classList.add('hidden');
     }
 
+    // If last shot was recorded without GPS (NFC URL tap), fill it in now
+    if (ShotTracker.round) {
+      const updated = ShotTracker.updateLastShotGps(pos);
+      if (updated) this._updateShotList();
+    }
+
     // Update accuracy indicator
     const dot = document.getElementById('gps-dot');
     const label = document.getElementById('gps-accuracy');
