@@ -51,6 +51,9 @@ const App = {
     // Init scoring
     this._initScoring();
 
+    // Handle NFC URL tag (?club=Driver) — fallback for devices where Web NFC is blocked
+    this._handleNfcUrlTag();
+
     // Render initial state
     this._renderHoleInfo();
     this._renderScoringScreen();
@@ -916,6 +919,46 @@ const App = {
   },
 
   // === NFC ===
+
+  _handleNfcUrlTag() {
+    const params = new URLSearchParams(window.location.search);
+    const club = params.get('club');
+    if (!club) return;
+
+    // Clean the URL immediately so refresh doesn't re-trigger
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, '', cleanUrl);
+
+    // Wait for GPS to be ready, then mark the shot
+    const tryMark = (attempts) => {
+      const pos = GpsManager.getLastPosition();
+      if (pos) {
+        this._handleNfcShot(null, club);
+        // Show brief toast
+        this._showNfcToast(club);
+      } else if (attempts > 0) {
+        setTimeout(() => tryMark(attempts - 1), 500);
+      } else {
+        // No GPS yet — still record shot, GPS will be null
+        this._handleNfcShot(null, club);
+        this._showNfcToast(club + ' (no GPS)');
+      }
+    };
+    setTimeout(() => tryMark(6), 300); // wait up to 3s for GPS
+  },
+
+  _showNfcToast(message) {
+    let toast = document.getElementById('nfc-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'nfc-toast';
+      toast.className = 'nfc-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = '⛳ ' + message + ' logged';
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), 2500);
+  },
 
   _bindNfc() {
     const modal = document.getElementById('nfc-modal');
