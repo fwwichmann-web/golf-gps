@@ -12,6 +12,7 @@ const ShotTracker = {
 
   startRound(tee) {
     const course = CourseData.getCourse();
+    const players = Storage.getPlayers();
     this.round = {
       id: 'r_' + Date.now(),
       courseId: course.id,
@@ -20,6 +21,7 @@ const ShotTracker = {
       date: new Date().toISOString(),
       status: 'in_progress',
       currentHole: 1,
+      players: players.map(p => ({ name: p.name, handicap: p.handicap })),
       holes: []
     };
     for (let i = 1; i <= 18; i++) {
@@ -27,10 +29,9 @@ const ShotTracker = {
       this.round.holes.push({
         number: i,
         par: hole ? hole.par : 4,
+        si: hole ? hole.si : i,
         shots: [],
-        putts: null,
-        totalStrokes: 0,
-        scoreToPar: null,
+        playerScores: null,   // set by saveHoleScores()
         completed: false
       });
     }
@@ -58,6 +59,8 @@ const ShotTracker = {
     return this.round.holes[this.round.currentHole - 1];
   },
 
+  // --- GPS Shot Tracking (for club distance stats) ---
+
   markShot() {
     if (!this.round) return null;
     const pos = GpsManager.getLastPosition();
@@ -82,12 +85,8 @@ const ShotTracker = {
     };
 
     holeData.shots.push(shot);
-    holeData.totalStrokes = holeData.shots.length;
     this._save();
-
-    // Haptic feedback
     if (navigator.vibrate) navigator.vibrate(50);
-
     return shot;
   },
 
@@ -100,16 +99,28 @@ const ShotTracker = {
     this._save();
   },
 
-  endHole(putts) {
-    if (!this.round) return;
-    const holeData = this.getCurrentHoleData();
-    holeData.putts = putts;
-    holeData.totalStrokes = holeData.shots.length + putts;
-    holeData.scoreToPar = holeData.totalStrokes - holeData.par;
-    holeData.completed = true;
+  // --- Scoring ---
 
-    if (this.round.currentHole < 18) {
-      this.round.currentHole++;
+  /**
+   * Save scores for a hole and advance the round.
+   * playerScores: [{strokes, putts, stablefordPoints}, ...]
+   */
+  saveHoleScores(holeNumber, playerScores) {
+    if (!this.round) return;
+    const hole = this.round.holes[holeNumber - 1];
+    hole.playerScores = playerScores;
+    hole.completed = true;
+
+    // Keep backward-compat fields from player 0
+    if (playerScores.length > 0) {
+      const p0 = playerScores[0];
+      hole.totalStrokes = p0.strokes;
+      hole.putts = p0.putts;
+      hole.scoreToPar = p0.strokes - hole.par;
+    }
+
+    if (holeNumber < 18) {
+      this.round.currentHole = holeNumber + 1;
     }
     this._save();
   },
@@ -127,29 +138,45 @@ const ShotTracker = {
 
   getRoundSummary() {
     if (!this.round) return null;
-    let totalStrokes = 0;
-    let totalPutts = 0;
-    let frontStrokes = 0;
-    let backStrokes = 0;
-    let frontPar = 0;
-    let backPar = 0;
+
+    const players = this.round.players || Storage.getPlayers();
+    const course = CourseData.getCourse();
+
+    // Per-player accumulators
+    const totals = players.map(p => ({
+      name: p.name,
+      handicap: p.handicap,
+      strokes: 0,
+      putts: 0,
+      stableford: 0,
+      front9Strokes: 0,
+      back9Strokes: 0,
+      front9Stableford: 0,
+      back9Stableford: 0
+    }));
+
     let holesPlayed = 0;
     const clubMap = {};
 
     for (const hole of this.round.holes) {
-      if (!hole.completed) continue;
+      if (!hole.completed || !hole.playerScores) continue;
       holesPlayed++;
-      totalStrokes += hole.totalStrokes;
-      totalPutts += hole.putts || 0;
 
-      if (hole.number <= 9) {
-        frontStrokes += hole.totalStrokes;
-        frontPar += hole.par;
-      } else {
-        backStrokes += hole.totalStrokes;
-        backPar += hole.par;
-      }
+      hole.playerScores.forEach((ps, i) => {
+        if (!totals[i]) return;
+        totals[i].strokes    += ps.strokes || 0;
+        totals[i].putts      += ps.putts || 0;
+        totals[i].stableford += ps.stablefordPoints || 0;
+        if (hole.number <= 9) {
+          totals[i].front9Strokes    += ps.strokes || 0;
+          totals[i].front9Stableford += ps.stablefordPoints || 0;
+        } else {
+          totals[i].back9Strokes    += ps.strokes || 0;
+          totals[i].back9Stableford += ps.stablefordPoints || 0;
+        }
+      });
 
+      // Club distance stats from GPS shots (player 0)
       for (const shot of hole.shots) {
         if (!shot.club || shot.club === 'Putter') continue;
         if (shot.distanceFromPrevious == null) continue;
@@ -174,15 +201,21 @@ const ShotTracker = {
       };
     }
 
+    // Sort players by stableford descending for leaderboard
+    const leaderboard = [...totals].sort((a, b) => b.stableford - a.stableford);
+
+    const p0 = totals[0] || { strokes: 0, putts: 0, stableford: 0, front9Strokes: 0, back9Strokes: 0 };
+
     return {
       holesPlayed,
-      totalStrokes,
-      scoreToPar: totalStrokes - 72,
-      totalPutts,
-      frontStrokes,
-      frontScoreToPar: frontStrokes - frontPar,
-      backStrokes,
-      backScoreToPar: backStrokes - backPar,
+      playerTotals: totals,
+      leaderboard,
+      // backward compat
+      totalStrokes: p0.strokes,
+      scoreToPar: p0.strokes - course.par,
+      totalPutts: p0.putts,
+      frontStrokes: p0.front9Strokes,
+      backStrokes: p0.back9Strokes,
       clubStats
     };
   },

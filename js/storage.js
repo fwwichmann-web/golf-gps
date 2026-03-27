@@ -60,6 +60,26 @@ const Storage = {
     localStorage.removeItem('current_round');
   },
 
+  // --- Players ---
+
+  getPlayers() {
+    return this._get('players') || [{ name: 'Player 1', handicap: 0 }];
+  },
+
+  savePlayers(players) {
+    this._set('players', players);
+  },
+
+  // --- NFC Tag Mappings ---
+
+  getNfcTagMap() {
+    return this._get('nfc_tags') || {};
+  },
+
+  saveNfcTagMap(map) {
+    this._set('nfc_tags', map);
+  },
+
   // --- Settings ---
 
   getSetting(key, defaultVal) {

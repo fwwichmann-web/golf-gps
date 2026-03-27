@@ -5,6 +5,8 @@ const App = {
   currentTee: 'White',
   gpsReady: false,
   wakeLock: null,
+  scoringHole: 1,
+  currentHoleScores: [],   // [{strokes, putts}, ...] — one per player, unsaved
 
   init() {
     // Load settings
@@ -27,6 +29,7 @@ const App = {
     this._bindHoleNav();
     this._bindSettings();
     this._bindShotTracker();
+    this._bindNfc();
 
     // Start GPS
     GpsManager.onPositionUpdate(pos => this._onGpsUpdate(pos));
@@ -42,9 +45,12 @@ const App = {
       });
     }
 
+    // Init scoring
+    this._initScoring();
+
     // Render initial state
     this._renderHoleInfo();
-    this._renderTrackerScreen();
+    this._renderScoringScreen();
     this._renderScorecard();
   },
 
@@ -188,40 +194,65 @@ const App = {
     }).join('');
   },
 
-  // === Shot Tracker UI ===
+  // === Scoring ===
+
+  _initScoring() {
+    const players = Storage.getPlayers();
+    this.currentHoleScores = players.map(() => ({ strokes: 0, putts: 0 }));
+    if (ShotTracker.hasActiveRound()) {
+      this.scoringHole = ShotTracker.round.currentHole;
+      this._loadHoleScores();
+    } else {
+      this.scoringHole = 1;
+    }
+  },
+
+  _loadHoleScores() {
+    if (!ShotTracker.round) return;
+    const hole = ShotTracker.round.holes[this.scoringHole - 1];
+    if (!hole || !hole.playerScores) return;
+    hole.playerScores.forEach((ps, i) => {
+      if (this.currentHoleScores[i]) {
+        this.currentHoleScores[i] = { strokes: ps.strokes || 0, putts: ps.putts || 0 };
+      }
+    });
+  },
 
   _bindShotTracker() {
-    // Mark shot from GPS screen
+    // Mark shot (GPS) — stays on GPS screen, just updates badge
     document.getElementById('btn-mark-shot').addEventListener('click', () => {
       this._handleMarkShot();
     });
 
-    // End hole
-    document.getElementById('btn-end-hole').addEventListener('click', () => {
-      const section = document.getElementById('end-hole-section');
-      section.classList.toggle('hidden');
-    });
-
-    // Putt buttons
-    document.querySelectorAll('.btn-putt').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const putts = parseInt(btn.dataset.putts);
-        this._handleEndHole(putts);
-      });
-    });
-
-    // Club buttons (build them)
+    // Build club buttons (GPS shot club assignment)
     this._buildClubButtons();
 
-    // New round button
-    document.getElementById('btn-new-round').addEventListener('click', () => {
-      this._startNewRound();
+    // Save hole button
+    document.getElementById('btn-save-hole').addEventListener('click', () => {
+      this._handleSaveHole();
     });
 
-    // Share/copy button
-    document.getElementById('btn-share-round').addEventListener('click', () => {
-      this._shareRound();
+    // Scoring hole navigation
+    document.getElementById('score-prev').addEventListener('click', () => {
+      if (this.scoringHole > 1) {
+        this.scoringHole--;
+        this._loadHoleScores();
+        this._renderScoringScreen();
+      }
     });
+    document.getElementById('score-next').addEventListener('click', () => {
+      if (this.scoringHole < 18) {
+        this.scoringHole++;
+        const players = Storage.getPlayers();
+        this.currentHoleScores = players.map(() => ({ strokes: 0, putts: 0 }));
+        this._loadHoleScores();
+        this._renderScoringScreen();
+      }
+    });
+
+    // New round / share
+    document.getElementById('btn-new-round').addEventListener('click', () => this._startNewRound());
+    document.getElementById('btn-share-round').addEventListener('click', () => this._shareRound());
   },
 
   _buildClubButtons() {
@@ -235,160 +266,240 @@ const App = {
       btn.addEventListener('click', () => {
         ShotTracker.setClubForLastShot(btn.dataset.club);
         document.getElementById('club-selector').classList.add('hidden');
-        this._renderTrackerScreen();
+        this._updateShotsBadge();
       });
     });
   },
 
   _handleMarkShot() {
-    // Auto-start round if needed
     if (!ShotTracker.hasActiveRound()) {
       ShotTracker.startRound(this.currentTee);
     }
-
-    // Sync hole
     if (ShotTracker.round) {
       ShotTracker.round.currentHole = this.currentHole;
     }
-
     const shot = ShotTracker.markShot();
     if (!shot) {
       alert('Cannot mark shot: no GPS signal');
       return;
     }
-
-    // Show club selector
+    // Open the GPS shots section and show club selector
+    const details = document.getElementById('gps-shots-details');
+    details.open = true;
     document.getElementById('club-selector').classList.remove('hidden');
-    document.getElementById('end-hole-section').classList.add('hidden');
-
-    this._renderTrackerScreen();
+    this._updateShotsBadge();
+    this._updateShotList();
     this._showScreen('screen-tracker');
   },
 
-  _handleEndHole(putts) {
-    ShotTracker.endHole(putts);
-    document.getElementById('end-hole-section').classList.add('hidden');
-    document.getElementById('club-selector').classList.add('hidden');
+  _updateShotsBadge() {
+    const badge = document.getElementById('shots-count-badge');
+    if (!ShotTracker.round) { badge.textContent = '0'; return; }
+    const holeData = ShotTracker.getCurrentHoleData();
+    badge.textContent = holeData ? holeData.shots.length : '0';
+  },
 
-    // Move to next hole on GPS screen too
-    if (this.currentHole < 18) {
-      this.currentHole = ShotTracker.round.currentHole;
-      this._renderHoleInfo();
+  _updateShotList() {
+    const list = document.getElementById('shot-list');
+    if (!ShotTracker.round) {
+      list.innerHTML = '<div class="empty-msg">No GPS shots. Use MARK SHOT on the GPS screen.</div>';
+      return;
+    }
+    const holeData = ShotTracker.getCurrentHoleData();
+    if (!holeData || holeData.shots.length === 0) {
+      list.innerHTML = '<div class="empty-msg">No GPS shots. Use MARK SHOT on the GPS screen.</div>';
+      return;
+    }
+    list.innerHTML = holeData.shots.map(s => {
+      const clubLabel = s.club || '(select club)';
+      const distLabel = s.distanceFromPrevious != null ? s.distanceFromPrevious + 'm' : 'Tee';
+      return '<div class="shot-item">' +
+        '<span class="shot-num">#' + s.index + '</span>' +
+        '<span class="shot-club">' + clubLabel + '</span>' +
+        '<span class="shot-distance">' + distLabel + '</span>' +
+      '</div>';
+    }).join('');
+  },
+
+  _renderScoringScreen() {
+    const players = Storage.getPlayers();
+    const hole = CourseData.getHole(this.scoringHole);
+    if (!hole) return;
+
+    // Ensure scores array matches player count
+    while (this.currentHoleScores.length < players.length) {
+      this.currentHoleScores.push({ strokes: 0, putts: 0 });
     }
 
-    this._renderTrackerScreen();
-    this._renderScorecard();
+    document.getElementById('score-hole-label').textContent = 'Hole ' + this.scoringHole;
+    document.getElementById('score-hole-sub').textContent = 'Par ' + hole.par + ' · SI ' + hole.si;
 
-    // Check if round is done
-    const allDone = ShotTracker.round.holes.every(h => h.completed);
-    if (allDone) {
+    const container = document.getElementById('player-score-cards');
+    container.innerHTML = players.map((player, i) => {
+      const s = this.currentHoleScores[i];
+      const pts = Scoring.stablefordPoints(s.strokes, hole.par, hole.si, player.handicap);
+      const ptsLabel = pts !== null ? pts + ' pts' : '— pts';
+      const ptsCls = pts !== null ? 'player-card-pts pts-' + pts : 'player-card-pts';
+      const received = Scoring.strokesReceived(player.handicap, hole.si);
+      const hcpLabel = 'HCP ' + player.handicap + (received > 0 ? ' (+' + received + ')' : '');
+
+      return '<div class="player-card">' +
+        '<div class="player-card-header">' +
+          '<span class="player-card-name">' + player.name + '</span>' +
+          '<span class="player-card-hcp">' + hcpLabel + '</span>' +
+          '<span class="' + ptsCls + '" id="score-pts-' + i + '">' + ptsLabel + '</span>' +
+        '</div>' +
+        '<div class="player-card-row">' +
+          '<span class="player-card-label">Strokes</span>' +
+          '<div class="counter-group">' +
+            '<button class="counter-btn" data-player="' + i + '" data-field="strokes" data-delta="-1">−</button>' +
+            '<span class="counter-value" id="score-strokes-' + i + '">' + s.strokes + '</span>' +
+            '<button class="counter-btn" data-player="' + i + '" data-field="strokes" data-delta="1">+</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="player-card-row">' +
+          '<span class="player-card-label">Putts</span>' +
+          '<div class="counter-group">' +
+            '<button class="counter-btn" data-player="' + i + '" data-field="putts" data-delta="-1">−</button>' +
+            '<span class="counter-value" id="score-putts-' + i + '">' + s.putts + '</span>' +
+            '<button class="counter-btn" data-player="' + i + '" data-field="putts" data-delta="1">+</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    // Bind +/- buttons
+    container.querySelectorAll('.counter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pi = parseInt(btn.dataset.player);
+        const field = btn.dataset.field;
+        const delta = parseInt(btn.dataset.delta);
+        this.currentHoleScores[pi][field] = Math.max(0, this.currentHoleScores[pi][field] + delta);
+        this._updatePlayerCardLive(pi, players[pi], hole);
+        if (navigator.vibrate) navigator.vibrate(20);
+      });
+    });
+
+    this._updateShotsBadge();
+    this._updateShotList();
+  },
+
+  _updatePlayerCardLive(pi, player, hole) {
+    const s = this.currentHoleScores[pi];
+    document.getElementById('score-strokes-' + pi).textContent = s.strokes;
+    document.getElementById('score-putts-' + pi).textContent = s.putts;
+
+    const ptsEl = document.getElementById('score-pts-' + pi);
+    const pts = Scoring.stablefordPoints(s.strokes, hole.par, hole.si, player.handicap);
+    if (pts !== null) {
+      ptsEl.textContent = pts + ' pts';
+      ptsEl.className = 'player-card-pts pts-' + pts;
+    } else {
+      ptsEl.textContent = '— pts';
+      ptsEl.className = 'player-card-pts';
+    }
+  },
+
+  _handleSaveHole() {
+    if (!ShotTracker.hasActiveRound()) {
+      ShotTracker.startRound(this.currentTee);
+    }
+
+    const players = Storage.getPlayers();
+    const hole = CourseData.getHole(this.scoringHole);
+
+    const playerScores = this.currentHoleScores.map((s, i) => ({
+      strokes: s.strokes,
+      putts: s.putts,
+      stablefordPoints: Scoring.stablefordPoints(s.strokes, hole.par, hole.si, players[i].handicap) || 0
+    }));
+
+    ShotTracker.saveHoleScores(this.scoringHole, playerScores);
+
+    if (this.scoringHole < 18) {
+      this.scoringHole++;
+      this.currentHole = this.scoringHole;
+      this.currentHoleScores = players.map(() => ({ strokes: 0, putts: 0 }));
+      this._loadHoleScores();
+      this._renderHoleInfo();
+      this._renderScoringScreen();
+      this._renderScorecard();
+    } else {
       const summary = ShotTracker.endRound();
       this._renderSummary(summary);
       this._showScreen('screen-summary');
     }
   },
 
-  _renderTrackerScreen() {
-    if (!ShotTracker.round) {
-      document.getElementById('tracker-hole').textContent = 'Hole ' + this.currentHole;
-      document.getElementById('tracker-par').textContent = 'Par --';
-      document.getElementById('tracker-shots').textContent = 'Shots: 0';
-      document.getElementById('shot-list').innerHTML =
-        '<div class="empty-msg">No shots recorded. Go to GPS screen and tap MARK SHOT.</div>';
-      return;
-    }
-
-    const holeData = ShotTracker.getCurrentHoleData();
-    document.getElementById('tracker-hole').textContent = 'Hole ' + ShotTracker.round.currentHole;
-    document.getElementById('tracker-par').textContent = 'Par ' + holeData.par;
-    document.getElementById('tracker-shots').textContent = 'Shots: ' + holeData.shots.length;
-
-    // Shot list
-    const list = document.getElementById('shot-list');
-    if (holeData.shots.length === 0) {
-      list.innerHTML = '<div class="empty-msg">No shots recorded. Go to GPS screen and tap MARK SHOT.</div>';
-    } else {
-      list.innerHTML = holeData.shots.map(s => {
-        const clubLabel = s.club || '(select club)';
-        const distLabel = s.distanceFromPrevious != null ? s.distanceFromPrevious + 'm' : 'Tee';
-        return '<div class="shot-item">' +
-          '<span class="shot-num">#' + s.index + '</span>' +
-          '<span class="shot-club">' + clubLabel + '</span>' +
-          '<span class="shot-distance">' + distLabel + '</span>' +
-        '</div>';
-      }).join('');
-    }
-  },
-
   _renderScorecard() {
     const miniCard = document.getElementById('running-scorecard');
     if (!ShotTracker.round) {
-      miniCard.innerHTML = '<div class="empty-msg">Start a round to see scorecard</div>';
+      miniCard.innerHTML = '<div class="empty-msg">Save a hole to see scorecard</div>';
       return;
     }
 
-    let html = '<table><tr><th>Hole</th>';
-    for (let i = 1; i <= 9; i++) html += '<th>' + i + '</th>';
-    html += '<th>OUT</th></tr>';
+    const players = ShotTracker.round.players || Storage.getPlayers();
 
-    // Par row
-    html += '<tr><td>Par</td>';
-    let frontPar = 0;
-    for (let i = 0; i < 9; i++) {
-      const h = ShotTracker.round.holes[i];
-      html += '<td>' + h.par + '</td>';
-      frontPar += h.par;
-    }
-    html += '<td>' + frontPar + '</td></tr>';
+    // Build header
+    let html = '<table><tr><th>H</th><th>Par</th>';
+    players.forEach(p => {
+      html += '<th>' + p.name.substring(0, 4) + '</th><th>Pts</th>';
+    });
+    html += '</tr>';
 
-    // Score row
-    html += '<tr><td>Score</td>';
-    let frontScore = 0;
-    let frontPlayed = false;
-    for (let i = 0; i < 9; i++) {
+    let playerFrontStrokes = players.map(() => 0);
+    let playerFrontPts = players.map(() => 0);
+    let playerBackStrokes = players.map(() => 0);
+    let playerBackPts = players.map(() => 0);
+    let frontPar = 0, backPar = 0;
+
+    for (let i = 0; i < 18; i++) {
       const h = ShotTracker.round.holes[i];
-      if (h.completed) {
-        const cls = h.scoreToPar > 0 ? 'score-over' : (h.scoreToPar < 0 ? 'score-under' : 'score-even');
-        html += '<td class="' + cls + '">' + h.totalStrokes + '</td>';
-        frontScore += h.totalStrokes;
-        frontPlayed = true;
-      } else {
-        html += '<td>-</td>';
+      if (i === 9) {
+        // OUT totals row
+        html += '<tr><td><b>OUT</b></td><td><b>' + frontPar + '</b></td>';
+        players.forEach((_, pi) => {
+          html += '<td><b>' + (playerFrontStrokes[pi] || '-') + '</b></td>' +
+                  '<td><b>' + (playerFrontPts[pi] || '-') + '</b></td>';
+        });
+        html += '</tr>';
       }
-    }
-    html += '<td>' + (frontPlayed ? frontScore : '-') + '</td></tr>';
 
-    // Back 9
-    html += '<tr><th>Hole</th>';
-    for (let i = 10; i <= 18; i++) html += '<th>' + i + '</th>';
-    html += '<th>IN</th></tr>';
+      if (i < 9) frontPar += h.par; else backPar += h.par;
 
-    html += '<tr><td>Par</td>';
-    let backPar = 0;
-    for (let i = 9; i < 18; i++) {
-      const h = ShotTracker.round.holes[i];
-      html += '<td>' + h.par + '</td>';
-      backPar += h.par;
-    }
-    html += '<td>' + backPar + '</td></tr>';
-
-    html += '<tr><td>Score</td>';
-    let backScore = 0;
-    let backPlayed = false;
-    for (let i = 9; i < 18; i++) {
-      const h = ShotTracker.round.holes[i];
-      if (h.completed) {
-        const cls = h.scoreToPar > 0 ? 'score-over' : (h.scoreToPar < 0 ? 'score-under' : 'score-even');
-        html += '<td class="' + cls + '">' + h.totalStrokes + '</td>';
-        backScore += h.totalStrokes;
-        backPlayed = true;
+      html += '<tr><td>' + h.number + '</td><td>' + h.par + '</td>';
+      if (h.completed && h.playerScores) {
+        h.playerScores.forEach((ps, pi) => {
+          const diff = ps.strokes - h.par;
+          const cls = diff > 0 ? 'score-over' : (diff < 0 ? 'score-under' : 'score-even');
+          html += '<td class="' + cls + '">' + ps.strokes + '</td>' +
+                  '<td>' + (ps.stablefordPoints || 0) + '</td>';
+          if (i < 9) { playerFrontStrokes[pi] += ps.strokes; playerFrontPts[pi] += ps.stablefordPoints || 0; }
+          else        { playerBackStrokes[pi]  += ps.strokes; playerBackPts[pi]  += ps.stablefordPoints || 0; }
+        });
       } else {
-        html += '<td>-</td>';
+        players.forEach(() => { html += '<td>-</td><td>-</td>'; });
       }
+      html += '</tr>';
     }
-    html += '<td>' + (backPlayed ? backScore : '-') + '</td></tr>';
 
-    html += '</table>';
+    // IN totals
+    html += '<tr><td><b>IN</b></td><td><b>' + backPar + '</b></td>';
+    players.forEach((_, pi) => {
+      html += '<td><b>' + (playerBackStrokes[pi] || '-') + '</b></td>' +
+              '<td><b>' + (playerBackPts[pi] || '-') + '</b></td>';
+    });
+    html += '</tr>';
+
+    // TOTAL row
+    html += '<tr><td><b>TOT</b></td><td><b>' + (frontPar + backPar) + '</b></td>';
+    players.forEach((_, pi) => {
+      const totStr = (playerFrontStrokes[pi] + playerBackStrokes[pi]) || '-';
+      const totPts = (playerFrontPts[pi] + playerBackPts[pi]) || '-';
+      html += '<td><b>' + totStr + '</b></td><td><b>' + totPts + '</b></td>';
+    });
+    html += '</tr></table>';
+
     miniCard.innerHTML = html;
   },
 
@@ -401,29 +512,58 @@ const App = {
     document.getElementById('summary-date').textContent =
       new Date(roundData.date).toLocaleDateString() + ' — ' + roundData.tee + ' Tees';
 
-    const scoreEl = document.getElementById('summary-score');
-    const sign = summary.scoreToPar >= 0 ? '+' : '';
-    const cls = summary.scoreToPar > 0 ? 'score-over' : (summary.scoreToPar < 0 ? 'score-under' : 'score-even');
-    scoreEl.innerHTML =
-      '<div class="big-score">' + summary.totalStrokes + '</div>' +
-      '<div class="score-to-par ' + cls + '">' + sign + summary.scoreToPar + '</div>';
+    // Stableford leaderboard
+    const lb = document.getElementById('summary-leaderboard');
+    if (summary.leaderboard && summary.leaderboard.length > 0) {
+      lb.innerHTML = summary.leaderboard.map((p, idx) => {
+        const cls = idx === 0 ? 'leaderboard-row first' : 'leaderboard-row';
+        const pos = idx === 0 ? '🏆' : (idx + 1) + '.';
+        return '<div class="' + cls + '">' +
+          '<span class="leaderboard-pos">' + pos + '</span>' +
+          '<div style="flex:1">' +
+            '<div class="leaderboard-name">' + p.name + '</div>' +
+            '<div class="leaderboard-hcp">HCP ' + p.handicap + ' · ' + p.strokes + ' strokes</div>' +
+          '</div>' +
+          '<div style="text-align:right">' +
+            '<div class="leaderboard-pts">' + p.stableford + '</div>' +
+            '<div class="leaderboard-pts-label">points</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } else {
+      lb.innerHTML = '<div class="empty-msg">No scores recorded</div>';
+    }
 
-    const frontSign = summary.frontScoreToPar >= 0 ? '+' : '';
-    const backSign = summary.backScoreToPar >= 0 ? '+' : '';
-    document.getElementById('summary-front').textContent = summary.frontStrokes + ' (' + frontSign + summary.frontScoreToPar + ')';
-    document.getElementById('summary-back').textContent = summary.backStrokes + ' (' + backSign + summary.backScoreToPar + ')';
-    document.getElementById('summary-putts').textContent = summary.totalPutts;
+    // Stroke details table
+    const strokeTable = document.getElementById('summary-stroke-table');
+    if (summary.playerTotals && summary.playerTotals.length > 0) {
+      let html = '<table><tr><th>Player</th><th>HCP</th><th>Front</th><th>Back</th><th>Total</th><th>Putts</th></tr>';
+      summary.playerTotals.forEach(p => {
+        const coursePar = 72;
+        const sign = (p.strokes - coursePar) >= 0 ? '+' : '';
+        html += '<tr>' +
+          '<td>' + p.name + '</td>' +
+          '<td>' + p.handicap + '</td>' +
+          '<td>' + (p.front9Strokes || '-') + '</td>' +
+          '<td>' + (p.back9Strokes || '-') + '</td>' +
+          '<td><b>' + (p.strokes || '-') + '</b> (' + sign + (p.strokes - coursePar) + ')</td>' +
+          '<td>' + (p.putts || '-') + '</td>' +
+        '</tr>';
+      });
+      html += '</table>';
+      strokeTable.innerHTML = html;
+    }
 
     // Club stats
     const clubContainer = document.getElementById('club-stats');
     const clubEntries = Object.entries(summary.clubStats).sort((a, b) => b[1].avgDistance - a[1].avgDistance);
-    clubContainer.innerHTML = clubEntries.map(([club, stats]) => {
-      return '<div class="club-stat-row">' +
+    clubContainer.innerHTML = clubEntries.length > 0 ? clubEntries.map(([club, stats]) =>
+      '<div class="club-stat-row">' +
         '<span class="club-stat-name">' + club + '</span>' +
         '<span class="club-stat-avg">avg ' + stats.avgDistance + 'm</span>' +
         '<span class="club-stat-count">(' + stats.count + ' shots)</span>' +
-      '</div>';
-    }).join('');
+      '</div>'
+    ).join('') : '<div class="empty-msg">No GPS shots recorded</div>';
 
     // Full scorecard
     this._renderScorecard();
@@ -437,35 +577,41 @@ const App = {
       ShotTracker.endRound();
     }
     this.currentHole = 1;
+    this.scoringHole = 1;
     ShotTracker.startRound(this.currentTee);
+    const players = Storage.getPlayers();
+    this.currentHoleScores = players.map(() => ({ strokes: 0, putts: 0 }));
     this._renderHoleInfo();
-    this._renderTrackerScreen();
+    this._renderScoringScreen();
     this._renderScorecard();
     this._showScreen('screen-gps');
   },
 
   _shareRound() {
-    const summary = ShotTracker.round ?
-      ShotTracker.getRoundSummary() :
-      (Storage.getRounds().length > 0 ? Storage.getRounds().slice(-1)[0].summary : null);
+    const rounds = Storage.getRounds();
+    const summary = ShotTracker.round
+      ? ShotTracker.getRoundSummary()
+      : (rounds.length > 0 ? rounds.slice(-1)[0].summary : null);
 
-    if (!summary) {
-      alert('No round data to share');
-      return;
+    if (!summary) { alert('No round data to share'); return; }
+
+    let text = 'Atlantic Beach Links\n';
+    text += new Date().toLocaleDateString() + '\n\n';
+
+    if (summary.leaderboard && summary.leaderboard.length > 0) {
+      text += 'STABLEFORD\n';
+      summary.leaderboard.forEach((p, i) => {
+        text += (i + 1) + '. ' + p.name + ' (HCP ' + p.handicap + '): ' + p.stableford + ' pts / ' + p.strokes + ' strokes\n';
+      });
     }
 
-    const sign = summary.scoreToPar >= 0 ? '+' : '';
-    let text = 'Atlantic Beach Links\n';
-    text += 'Score: ' + summary.totalStrokes + ' (' + sign + summary.scoreToPar + ')\n';
-    text += 'Front: ' + summary.frontStrokes + ' | Back: ' + summary.backStrokes + '\n';
-    text += 'Putts: ' + summary.totalPutts + '\n\n';
-
-    const clubEntries = Object.entries(summary.clubStats).sort((a, b) => b[1].avgDistance - a[1].avgDistance);
-    if (clubEntries.length > 0) {
-      text += 'Club Distances:\n';
-      for (const [club, stats] of clubEntries) {
-        text += club + ': avg ' + stats.avgDistance + 'm (' + stats.count + ' shots)\n';
-      }
+    if (Object.keys(summary.clubStats).length > 0) {
+      text += '\nCLUB DISTANCES\n';
+      Object.entries(summary.clubStats)
+        .sort((a, b) => b[1].avgDistance - a[1].avgDistance)
+        .forEach(([club, stats]) => {
+          text += club + ': avg ' + stats.avgDistance + 'm (' + stats.count + ' shots)\n';
+        });
     }
 
     navigator.clipboard.writeText(text).then(() => {
@@ -480,6 +626,11 @@ const App = {
   _bindSettings() {
     document.getElementById('btn-settings-close').addEventListener('click', () => {
       document.getElementById('settings-modal').classList.add('hidden');
+      // Re-init scoring in case player list changed
+      const players = Storage.getPlayers();
+      this.currentHoleScores = players.map(() => ({ strokes: 0, putts: 0 }));
+      this._loadHoleScores();
+      this._renderScoringScreen();
     });
 
     document.getElementById('setting-tee').addEventListener('change', e => {
@@ -493,6 +644,212 @@ const App = {
       Storage.setSetting('showMapper', show);
       document.getElementById('nav-mapper').style.display = show ? '' : 'none';
     });
+
+    // Show players when settings opens
+    document.getElementById('nav-settings').addEventListener('click', () => {
+      this._renderSettingsPlayers();
+    }, { once: false });
+
+    // Add player
+    document.getElementById('btn-add-player').addEventListener('click', () => {
+      const players = Storage.getPlayers();
+      if (players.length >= 4) { alert('Maximum 4 players'); return; }
+      players.push({ name: 'Player ' + (players.length + 1), handicap: 0 });
+      Storage.savePlayers(players);
+      this._renderSettingsPlayers();
+    });
+
+    // Render on first open
+    this._renderSettingsPlayers();
+  },
+
+  _renderSettingsPlayers() {
+    const players = Storage.getPlayers();
+    const list = document.getElementById('settings-player-list');
+    list.innerHTML = players.map((p, i) =>
+      '<div class="settings-player-row">' +
+        '<input class="player-name-input" type="text" value="' + p.name + '" data-index="' + i + '" placeholder="Name">' +
+        '<input class="player-hcp-input" type="number" value="' + p.handicap + '" data-index="' + i + '" min="0" max="54" placeholder="HCP">' +
+        (players.length > 1 ? '<button class="player-delete-btn" data-index="' + i + '">✕</button>' : '<span style="width:24px"></span>') +
+      '</div>'
+    ).join('');
+
+    list.querySelectorAll('.player-name-input, .player-hcp-input').forEach(inp => {
+      inp.addEventListener('change', () => this._savePlayersFromSettings());
+    });
+    list.querySelectorAll('.player-delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const players = Storage.getPlayers();
+        players.splice(parseInt(btn.dataset.index), 1);
+        Storage.savePlayers(players);
+        this._renderSettingsPlayers();
+      });
+    });
+  },
+
+  _savePlayersFromSettings() {
+    const players = [];
+    document.querySelectorAll('.settings-player-row').forEach(row => {
+      const name = (row.querySelector('.player-name-input').value || 'Player').trim();
+      const handicap = Math.max(0, Math.min(54, parseInt(row.querySelector('.player-hcp-input').value) || 0));
+      players.push({ name, handicap });
+    });
+    Storage.savePlayers(players);
+  },
+
+  // === NFC ===
+
+  async _bindNfc() {
+    const openBtn = document.getElementById('btn-nfc-setup-open');
+    const closeBtn = document.getElementById('btn-nfc-modal-close');
+    const modal = document.getElementById('nfc-modal');
+    const registerBtn = document.getElementById('btn-nfc-register');
+
+    // Populate club select
+    const select = document.getElementById('nfc-club-select');
+    select.innerHTML = CLUBS.map(c => '<option value="' + c + '">' + c + '</option>').join('');
+
+    // Open / close
+    openBtn.addEventListener('click', () => {
+      document.getElementById('settings-modal').classList.add('hidden');
+      NfcManager.setPlayMode();
+      this._renderNfcTagList();
+      this._updateNfcStatusBadge();
+      modal.classList.remove('hidden');
+    });
+    closeBtn.addEventListener('click', () => {
+      NfcManager.setPlayMode();
+      this._setNfcRegisterStatus('');
+      modal.classList.add('hidden');
+    });
+
+    // Register flow: tap button → switch to register mode → next tag read maps to selected club
+    registerBtn.addEventListener('click', () => {
+      if (!NfcManager.isSupported()) {
+        this._setNfcRegisterStatus('NFC not supported on this device/browser.', 'error');
+        return;
+      }
+      const club = document.getElementById('nfc-club-select').value;
+      this._setNfcRegisterStatus('Hold phone near the ' + club + ' grip tag...', 'waiting');
+      document.getElementById('nfc-dot').className = 'nfc-dot waiting';
+
+      NfcManager.setRegisterMode((uid) => {
+        NfcManager.mapTagToClub(uid, club);
+        NfcManager.setPlayMode();
+        this._setNfcRegisterStatus(club + ' registered!', 'success');
+        document.getElementById('nfc-dot').className = 'nfc-dot active';
+        this._renderNfcTagList();
+        if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
+      });
+    });
+
+    // Start NFC scanning (play mode)
+    if (NfcManager.isSupported()) {
+      const result = await NfcManager.start((uid, club) => {
+        this._handleNfcShot(uid, club);
+      });
+
+      if (result.ok) {
+        this._showNfcActiveBar(true);
+        document.getElementById('nfc-status-label').textContent = 'Ready';
+        document.getElementById('nfc-dot').className = 'nfc-dot active';
+      } else {
+        document.getElementById('nfc-status-label').textContent = result.error;
+        document.getElementById('nfc-dot').className = 'nfc-dot error';
+      }
+    } else {
+      document.getElementById('nfc-status-label').textContent = 'Not supported';
+      document.getElementById('nfc-dot').className = 'nfc-dot error';
+    }
+  },
+
+  _handleNfcShot(uid, club) {
+    // Auto-start round if needed
+    if (!ShotTracker.hasActiveRound()) {
+      ShotTracker.startRound(this.currentTee);
+    }
+    if (ShotTracker.round) {
+      ShotTracker.round.currentHole = this.currentHole;
+    }
+
+    const shot = ShotTracker.markShot();
+    if (!shot) return; // no GPS yet
+
+    if (club) {
+      ShotTracker.setClubForLastShot(club);
+      // Hide club selector — club already known
+      document.getElementById('club-selector').classList.add('hidden');
+    } else {
+      // Unknown tag — show club selector so user can still assign
+      document.getElementById('club-selector').classList.remove('hidden');
+    }
+
+    document.getElementById('end-hole-section').classList.add('hidden');
+    this._renderTrackerScreen();
+    this._showScreen('screen-tracker');
+
+    // Brief vibrate to confirm
+    if (navigator.vibrate) navigator.vibrate(80);
+  },
+
+  _showNfcActiveBar(show) {
+    const bar = document.getElementById('nfc-active-bar');
+    if (show) {
+      bar.classList.remove('hidden');
+      document.getElementById('nfc-gps-dot').className = 'nfc-dot active';
+    } else {
+      bar.classList.add('hidden');
+    }
+  },
+
+  _renderNfcTagList() {
+    const list = document.getElementById('nfc-tag-list');
+    const mappings = NfcManager.getAllMappings();
+    if (mappings.length === 0) {
+      list.innerHTML = '<div class="empty-msg">No clubs registered yet</div>';
+      return;
+    }
+    list.innerHTML = mappings.map(({ uid, club }) =>
+      '<div class="nfc-tag-item">' +
+        '<span class="nfc-tag-club">' + club + '</span>' +
+        '<span class="nfc-tag-uid">' + uid + '</span>' +
+        '<button class="nfc-tag-delete" data-uid="' + uid + '">&#x2715;</button>' +
+      '</div>'
+    ).join('');
+    list.querySelectorAll('.nfc-tag-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        NfcManager.removeTag(btn.dataset.uid);
+        this._renderNfcTagList();
+      });
+    });
+  },
+
+  _updateNfcStatusBadge() {
+    const dot = document.getElementById('nfc-dot');
+    const label = document.getElementById('nfc-status-label');
+    if (!NfcManager.isSupported()) {
+      dot.className = 'nfc-dot error';
+      label.textContent = 'Not supported';
+    } else if (NfcManager.scanning) {
+      dot.className = 'nfc-dot active';
+      label.textContent = 'Ready';
+    } else {
+      dot.className = 'nfc-dot error';
+      label.textContent = 'Not scanning';
+    }
+  },
+
+  _setNfcRegisterStatus(msg, type) {
+    const el = document.getElementById('nfc-register-status');
+    if (!msg) {
+      el.classList.add('hidden');
+      el.className = 'nfc-register-status hidden';
+      el.textContent = '';
+      return;
+    }
+    el.textContent = msg;
+    el.className = 'nfc-register-status ' + (type || '');
+    el.classList.remove('hidden');
   },
 
   // === Wake Lock ===

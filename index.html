@@ -64,44 +64,48 @@
     <span id="gps-accuracy">GPS: Waiting...</span>
   </div>
 
+  <!-- NFC Status Bar -->
+  <div class="nfc-active-bar hidden" id="nfc-active-bar">
+    <span class="nfc-dot" id="nfc-gps-dot"></span>
+    <span id="nfc-active-label">NFC: tap club to record shot</span>
+  </div>
+
   <!-- Mark Shot Button -->
   <button id="btn-mark-shot" class="btn-primary btn-mark-shot">MARK SHOT</button>
 </section>
 
-<!-- Screen: Shot Tracker -->
+<!-- Screen: Scoring -->
 <section id="screen-tracker" class="screen">
-  <div class="tracker-header">
-    <span id="tracker-hole">Hole 1</span>
-    <span id="tracker-par">Par 4</span>
-    <span id="tracker-shots">Shots: 0</span>
-  </div>
 
-  <!-- Shot List -->
-  <div id="shot-list" class="shot-list">
-    <div class="empty-msg">No shots recorded. Go to GPS screen and tap MARK SHOT.</div>
-  </div>
-
-  <!-- Club Selector (shown after marking a shot) -->
-  <div id="club-selector" class="club-selector hidden">
-    <div class="section-label">SELECT CLUB</div>
-    <div id="club-buttons" class="club-grid"></div>
-  </div>
-
-  <!-- End Hole -->
-  <div id="end-hole-section" class="end-hole-section hidden">
-    <div class="section-label">PUTTS</div>
-    <div class="putt-buttons">
-      <button class="btn-putt" data-putts="0">0</button>
-      <button class="btn-putt" data-putts="1">1</button>
-      <button class="btn-putt" data-putts="2">2</button>
-      <button class="btn-putt" data-putts="3">3</button>
-      <button class="btn-putt" data-putts="4">4+</button>
+  <!-- Hole Navigation -->
+  <div class="score-hole-header">
+    <button id="score-prev" class="hole-nav-btn">◄</button>
+    <div class="score-hole-info">
+      <span class="score-hole-label" id="score-hole-label">Hole 1</span>
+      <span class="score-hole-sub" id="score-hole-sub">Par 4 · SI 13</span>
     </div>
+    <button id="score-next" class="hole-nav-btn">►</button>
   </div>
 
-  <div class="tracker-actions">
-    <button id="btn-end-hole" class="btn-secondary">END HOLE</button>
-  </div>
+  <!-- Player score cards (rendered by JS) -->
+  <div id="player-score-cards"></div>
+
+  <!-- Save Hole -->
+  <button id="btn-save-hole" class="btn-primary btn-save-hole">SAVE HOLE →</button>
+
+  <!-- GPS Shots (collapsed — for club distance tracking) -->
+  <details class="gps-shots-details" id="gps-shots-details">
+    <summary class="gps-shots-summary">
+      GPS Shots <span id="shots-count-badge" class="shots-badge">0</span>
+    </summary>
+    <div id="shot-list" class="shot-list">
+      <div class="empty-msg">No GPS shots. Use MARK SHOT on the GPS screen.</div>
+    </div>
+    <div id="club-selector" class="club-selector hidden">
+      <div class="section-label">SELECT CLUB</div>
+      <div id="club-buttons" class="club-grid"></div>
+    </div>
+  </details>
 
   <!-- Running Scorecard -->
   <div class="section-label">SCORECARD</div>
@@ -116,25 +120,15 @@
     <div class="summary-date" id="summary-date"></div>
   </div>
 
-  <div class="summary-score" id="summary-score">
-    <div class="big-score">--</div>
-    <div class="score-to-par">--</div>
-  </div>
+  <!-- Stableford Leaderboard -->
+  <div class="section-label">STABLEFORD</div>
+  <div id="summary-leaderboard" class="summary-leaderboard"></div>
 
-  <div class="summary-grid">
-    <div class="summary-stat">
-      <span class="stat-label">Front 9</span>
-      <span class="stat-value" id="summary-front">--</span>
-    </div>
-    <div class="summary-stat">
-      <span class="stat-label">Back 9</span>
-      <span class="stat-value" id="summary-back">--</span>
-    </div>
-    <div class="summary-stat">
-      <span class="stat-label">Putts</span>
-      <span class="stat-value" id="summary-putts">--</span>
-    </div>
-  </div>
+  <!-- Stroke totals (collapsible) -->
+  <details class="summary-strokes-details">
+    <summary class="summary-strokes-summary">Stroke Play Details</summary>
+    <div id="summary-stroke-table" class="summary-stroke-table"></div>
+  </details>
 
   <div class="section-label">CLUB DISTANCES</div>
   <div id="club-stats" class="club-stats"></div>
@@ -205,11 +199,51 @@
       <option value="Blue">Blue (Member)</option>
       <option value="Red">Red (Ladies)</option>
     </select>
-    <label>
+
+    <label>Players &amp; Handicaps</label>
+    <div id="settings-player-list"></div>
+    <button id="btn-add-player" class="btn-secondary btn-add-player">+ Add Player</button>
+
+    <label style="margin-top:12px;">
       <input type="checkbox" id="setting-mapper-access"> Show Course Mapper
     </label>
     <div class="modal-actions">
+      <button id="btn-nfc-setup-open" class="btn-secondary" style="margin-right:auto;">NFC Club Setup</button>
       <button id="btn-settings-close" class="btn-secondary">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- NFC Setup Modal -->
+<div id="nfc-modal" class="modal hidden">
+  <div class="modal-content nfc-modal-content">
+    <div class="nfc-modal-header">
+      <h3>NFC Club Tags</h3>
+      <div class="nfc-status">
+        <span class="nfc-dot" id="nfc-dot"></span>
+        <span id="nfc-status-label">Checking...</span>
+      </div>
+    </div>
+
+    <div class="section-label">REGISTERED CLUBS</div>
+    <div id="nfc-tag-list" class="nfc-tag-list">
+      <div class="empty-msg">No clubs registered yet</div>
+    </div>
+
+    <div class="section-label">REGISTER NEW CLUB</div>
+    <div class="nfc-register">
+      <select id="nfc-club-select"></select>
+      <button id="btn-nfc-register" class="btn-primary nfc-register-btn">TAP TAG TO REGISTER</button>
+      <div id="nfc-register-status" class="nfc-register-status hidden"></div>
+    </div>
+
+    <div class="nfc-help">
+      <p>Stick an NFC sticker (NTAG213) inside each club's grip cap. During a round, tap the club to your phone — the shot is logged with GPS + club automatically.</p>
+      <p class="nfc-help-note">Requires Android Chrome. iPhone needs Safari 17+ (iOS 17+).</p>
+    </div>
+
+    <div class="modal-actions">
+      <button id="btn-nfc-modal-close" class="btn-secondary">CLOSE</button>
     </div>
   </div>
 </div>
@@ -245,6 +279,8 @@
 <script src="js/gps.js"></script>
 <script src="js/shot-tracker.js"></script>
 <script src="js/course-mapper.js"></script>
+<script src="js/scoring.js"></script>
+<script src="js/nfc.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
