@@ -112,6 +112,36 @@
   <div id="running-scorecard" class="scorecard-mini"></div>
 </section>
 
+<!-- Screen: History -->
+<section id="screen-history" class="screen">
+  <div class="history-header">
+    <h2>Round History</h2>
+    <span id="history-count" class="history-count"></span>
+  </div>
+  <div id="history-list" class="history-list">
+    <div class="empty-msg">No completed rounds yet</div>
+  </div>
+</section>
+
+<!-- Round Detail Modal -->
+<div id="round-detail-modal" class="modal hidden">
+  <div class="modal-content round-detail-content">
+    <div class="round-detail-header">
+      <div>
+        <div class="round-detail-date" id="rd-date"></div>
+        <div class="round-detail-course" id="rd-course"></div>
+      </div>
+      <button id="btn-rd-close" class="hole-nav-btn">✕</button>
+    </div>
+    <div class="section-label">STABLEFORD</div>
+    <div id="rd-leaderboard"></div>
+    <div class="section-label">SCORECARD</div>
+    <div id="rd-scorecard" class="scorecard-mini"></div>
+    <div class="section-label">CLUB DISTANCES</div>
+    <div id="rd-clubs" class="club-stats"></div>
+  </div>
+</div>
+
 <!-- Screen: Round Summary -->
 <section id="screen-summary" class="screen">
   <div class="summary-header">
@@ -257,6 +287,10 @@
   <button class="nav-btn" data-screen="screen-tracker">
     <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h14v14zM19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z"/></svg>
     <span>Track</span>
+  </button>
+  <button class="nav-btn" data-screen="screen-history">
+    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 017-7 7 7 0 017 7 7 7 0 01-7 7 6.99 6.99 0 01-4.9-2L6.7 18.39A9 9 0 0013 21a9 9 0 009-9 9 9 0 00-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
+    <span>History</span>
   </button>
   <button class="nav-btn" data-screen="screen-summary">
     <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>

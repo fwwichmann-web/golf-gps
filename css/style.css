@@ -590,6 +590,88 @@ html, body {
   stroke-width: 1.5;
 }
 
+/* === History Screen === */
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 4px;
+}
+.history-header h2 { font-size: 16px; font-weight: 700; }
+.history-count { font-size: 11px; color: var(--text-muted); }
+
+.history-list { padding-bottom: 8px; }
+
+.history-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.history-card-info { flex: 1; min-width: 0; }
+.history-card-date { font-size: 13px; font-weight: 600; }
+.history-card-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.history-card-winner {
+  font-size: 12px;
+  color: var(--accent-green);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-card-pts {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent-green);
+  text-align: center;
+  flex-shrink: 0;
+}
+.history-card-pts-label { font-size: 10px; color: var(--text-muted); text-align: center; }
+.history-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.btn-view-round {
+  padding: 6px 12px;
+  background: var(--accent-blue);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-delete-round {
+  padding: 6px 12px;
+  background: none;
+  color: var(--accent-red);
+  border: 1px solid var(--accent-red);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* Round Detail Modal */
+.round-detail-content {
+  max-height: 88vh;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 400px;
+}
+.round-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.round-detail-date { font-size: 15px; font-weight: 700; }
+.round-detail-course { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
 /* === Scoring Screen === */
 
 .score-hole-header {

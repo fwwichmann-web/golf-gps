@@ -48,6 +48,11 @@ const Storage = {
     this._set('rounds', rounds);
   },
 
+  deleteRound(roundId) {
+    const rounds = (this._get('rounds') || []).filter(r => r.id !== roundId);
+    this._set('rounds', rounds);
+  },
+
   getCurrentRound() {
     return this._get('current_round');
   },

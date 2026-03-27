@@ -13,6 +13,9 @@ const App = {
     this.currentTee = Storage.getSetting('tee', 'White');
     const showMapper = Storage.getSetting('showMapper', false);
 
+    // Bind history screen
+    this._bindHistory();
+
     // Load or start round
     if (ShotTracker.hasActiveRound()) {
       this.currentHole = ShotTracker.round.currentHole;
@@ -695,6 +698,143 @@ const App = {
       players.push({ name, handicap });
     });
     Storage.savePlayers(players);
+  },
+
+  // === History ===
+
+  _bindHistory() {
+    // Render when tab is opened
+    document.querySelector('.nav-btn[data-screen="screen-history"]').addEventListener('click', () => {
+      this._renderHistory();
+    });
+
+    // Close round detail modal
+    document.getElementById('btn-rd-close').addEventListener('click', () => {
+      document.getElementById('round-detail-modal').classList.add('hidden');
+    });
+  },
+
+  _renderHistory() {
+    const rounds = Storage.getRounds().slice().reverse(); // newest first
+    const countEl = document.getElementById('history-count');
+    const list = document.getElementById('history-list');
+
+    countEl.textContent = rounds.length + ' round' + (rounds.length !== 1 ? 's' : '');
+
+    if (rounds.length === 0) {
+      list.innerHTML = '<div class="empty-msg">No completed rounds yet. Finish a round to see it here.</div>';
+      return;
+    }
+
+    list.innerHTML = rounds.map(round => {
+      const summary = round.summary;
+      const date = new Date(round.date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+      const teeLabel = round.tee + ' Tees';
+      const players = round.players || [];
+      const playerNames = players.map(p => p.name).join(', ');
+
+      let winnerHtml = '';
+      let ptsHtml = '<div class="history-card-pts">-</div><div class="history-card-pts-label">pts</div>';
+
+      if (summary && summary.leaderboard && summary.leaderboard.length > 0) {
+        const winner = summary.leaderboard[0];
+        winnerHtml = '<div class="history-card-winner">🏆 ' + winner.name + ' — ' + winner.stableford + ' pts</div>';
+        ptsHtml = '<div class="history-card-pts">' + winner.stableford + '</div><div class="history-card-pts-label">pts</div>';
+      }
+
+      return '<div class="history-card">' +
+        '<div class="history-card-info">' +
+          '<div class="history-card-date">' + date + '</div>' +
+          '<div class="history-card-sub">' + teeLabel + ' · ' + (summary ? summary.holesPlayed + ' holes' : '?') + (playerNames ? ' · ' + playerNames : '') + '</div>' +
+          winnerHtml +
+        '</div>' +
+        '<div>' + ptsHtml + '</div>' +
+        '<div class="history-card-actions">' +
+          '<button class="btn-view-round" data-id="' + round.id + '">View</button>' +
+          '<button class="btn-delete-round" data-id="' + round.id + '">Delete</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    list.querySelectorAll('.btn-view-round').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const round = rounds.find(r => r.id === btn.dataset.id);
+        if (round) this._showRoundDetail(round);
+      });
+    });
+
+    list.querySelectorAll('.btn-delete-round').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!confirm('Delete this round?')) return;
+        Storage.deleteRound(btn.dataset.id);
+        this._renderHistory();
+      });
+    });
+  },
+
+  _showRoundDetail(round) {
+    const summary = round.summary;
+    const date = new Date(round.date).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+    document.getElementById('rd-date').textContent = date + ' — ' + round.tee + ' Tees';
+    document.getElementById('rd-course').textContent = round.courseName || 'Atlantic Beach Links';
+
+    // Leaderboard
+    const lb = document.getElementById('rd-leaderboard');
+    if (summary && summary.leaderboard && summary.leaderboard.length > 0) {
+      lb.innerHTML = summary.leaderboard.map((p, idx) => {
+        const cls = idx === 0 ? 'leaderboard-row first' : 'leaderboard-row';
+        const pos = idx === 0 ? '🏆' : (idx + 1) + '.';
+        return '<div class="' + cls + '">' +
+          '<span class="leaderboard-pos">' + pos + '</span>' +
+          '<div style="flex:1"><div class="leaderboard-name">' + p.name + '</div>' +
+          '<div class="leaderboard-hcp">HCP ' + p.handicap + ' · ' + p.strokes + ' strokes</div></div>' +
+          '<div style="text-align:right"><div class="leaderboard-pts">' + p.stableford + '</div>' +
+          '<div class="leaderboard-pts-label">points</div></div>' +
+        '</div>';
+      }).join('');
+    } else {
+      lb.innerHTML = '<div class="empty-msg">No score data</div>';
+    }
+
+    // Scorecard
+    const sc = document.getElementById('rd-scorecard');
+    const players = round.players || [];
+    let html = '<table><tr><th>H</th><th>Par</th>';
+    players.forEach(p => { html += '<th>' + p.name.substring(0, 4) + '</th><th>Pts</th>'; });
+    html += '</tr>';
+    round.holes.forEach(h => {
+      if (!h.completed) return;
+      const diff = h.scoreToPar;
+      html += '<tr><td>' + h.number + '</td><td>' + h.par + '</td>';
+      if (h.playerScores) {
+        h.playerScores.forEach(ps => {
+          const cls = (ps.strokes - h.par) > 0 ? 'score-over' : ((ps.strokes - h.par) < 0 ? 'score-under' : 'score-even');
+          html += '<td class="' + cls + '">' + ps.strokes + '</td><td>' + (ps.stablefordPoints || 0) + '</td>';
+        });
+      } else {
+        players.forEach(() => { html += '<td>-</td><td>-</td>'; });
+      }
+      html += '</tr>';
+    });
+    html += '</table>';
+    sc.innerHTML = html;
+
+    // Club stats
+    const clubs = document.getElementById('rd-clubs');
+    if (summary && summary.clubStats && Object.keys(summary.clubStats).length > 0) {
+      clubs.innerHTML = Object.entries(summary.clubStats)
+        .sort((a, b) => b[1].avgDistance - a[1].avgDistance)
+        .map(([club, s]) =>
+          '<div class="club-stat-row"><span class="club-stat-name">' + club + '</span>' +
+          '<span class="club-stat-avg">avg ' + s.avgDistance + 'm</span>' +
+          '<span class="club-stat-count">(' + s.count + ' shots)</span></div>'
+        ).join('');
+    } else {
+      clubs.innerHTML = '<div class="empty-msg">No GPS shots recorded</div>';
+    }
+
+    document.getElementById('round-detail-modal').classList.remove('hidden');
   },
 
   // === NFC ===
