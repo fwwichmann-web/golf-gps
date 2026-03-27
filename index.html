@@ -58,6 +58,13 @@
     <div class="empty-msg">No hazards mapped for this hole</div>
   </div>
 
+  <!-- Pace of Play -->
+  <div class="pace-bar hidden" id="pace-bar">
+    <span id="pace-elapsed">0:00</span>
+    <span id="pace-status" class="pace-status"></span>
+    <span id="pace-hole-avg">— /hole</span>
+  </div>
+
   <!-- GPS Accuracy -->
   <div class="gps-bar">
     <span class="gps-dot" id="gps-dot"></span>
@@ -282,6 +289,16 @@
     <label>Players &amp; Handicaps</label>
     <div id="settings-player-list"></div>
     <button id="btn-add-player" class="btn-secondary btn-add-player">+ Add Player</button>
+
+    <label style="margin-top:12px;">Target Round Time:
+      <select id="setting-pace" style="margin-left:8px;">
+        <option value="0">Off</option>
+        <option value="240">4 hours</option>
+        <option value="260" selected>4 hrs 20 min</option>
+        <option value="270">4 hrs 30 min</option>
+        <option value="300">5 hours</option>
+      </select>
+    </label>
 
     <label style="margin-top:12px;">
       <input type="checkbox" id="setting-mapper-access"> Show Course Mapper

@@ -7,6 +7,7 @@ const App = {
   wakeLock: null,
   scoringHole: 1,
   currentHoleScores: [],   // [{strokes, putts}, ...] — one per player, unsaved
+  _paceTimer: null,
 
   init() {
     // Load settings
@@ -58,6 +59,9 @@ const App = {
 
     // Handle NFC URL tag after DOM is ready
     this._handleNfcUrlTag();
+
+    // Start pace timer if a round is already active
+    this._startPaceTimer();
   },
 
   // === Navigation ===
@@ -466,6 +470,7 @@ const App = {
       this._renderScorecard();
     } else {
       const summary = ShotTracker.endRound();
+      this._stopPaceTimer();
       this._renderSummary(summary);
       this._showScreen('screen-summary');
     }
@@ -847,6 +852,61 @@ const App = {
     });
   },
 
+  // === Pace of Play ===
+
+  _startPaceTimer() {
+    if (this._paceTimer) { clearInterval(this._paceTimer); this._paceTimer = null; }
+    const targetMins = parseInt(Storage.getSetting('paceTarget', '260'));
+    const bar = document.getElementById('pace-bar');
+    if (!targetMins || !ShotTracker.hasActiveRound()) { bar.classList.add('hidden'); return; }
+
+    bar.classList.remove('hidden');
+    this._updatePaceBar(targetMins);
+    this._paceTimer = setInterval(() => this._updatePaceBar(targetMins), 10000);
+  },
+
+  _updatePaceBar(targetMins) {
+    if (!ShotTracker.round) return;
+    const started  = new Date(ShotTracker.round.date).getTime();
+    const elapsed  = Math.floor((Date.now() - started) / 1000); // seconds
+    const hole     = ShotTracker.round.currentHole || 1;
+    const targetSec = targetMins * 60;
+    const expectedSec = Math.round((hole - 1) / 18 * targetSec);
+    const diffSec  = elapsed - expectedSec;
+
+    // Format elapsed
+    const h = Math.floor(elapsed / 3600);
+    const m = Math.floor((elapsed % 3600) / 60);
+    const elapsedStr = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+
+    // Avg per hole
+    const avgMin = hole > 1 ? Math.round(elapsed / 60 / (hole - 1)) : 0;
+    const avgStr = hole > 1 ? avgMin + 'm/hole' : '—';
+
+    // Status
+    const statusEl = document.getElementById('pace-status');
+    const absDiff  = Math.abs(Math.round(diffSec / 60));
+    if (Math.abs(diffSec) < 120) {
+      statusEl.textContent = 'On pace';
+      statusEl.className   = 'pace-status pace-ok';
+    } else if (diffSec > 0) {
+      statusEl.textContent = absDiff + 'm slow';
+      statusEl.className   = 'pace-status pace-slow';
+    } else {
+      statusEl.textContent = absDiff + 'm fast';
+      statusEl.className   = 'pace-status pace-fast';
+    }
+
+    document.getElementById('pace-elapsed').textContent  = elapsedStr;
+    document.getElementById('pace-hole-avg').textContent = avgStr;
+  },
+
+  _stopPaceTimer() {
+    if (this._paceTimer) { clearInterval(this._paceTimer); this._paceTimer = null; }
+    const bar = document.getElementById('pace-bar');
+    if (bar) bar.classList.add('hidden');
+  },
+
   // === Settings ===
 
   _bindSettings() {
@@ -869,6 +929,13 @@ const App = {
       const show = e.target.checked;
       Storage.setSetting('showMapper', show);
       document.getElementById('nav-mapper').style.display = show ? '' : 'none';
+    });
+
+    const paceSelect = document.getElementById('setting-pace');
+    paceSelect.value = Storage.getSetting('paceTarget', '260');
+    paceSelect.addEventListener('change', e => {
+      Storage.setSetting('paceTarget', e.target.value);
+      this._startPaceTimer();
     });
 
     // Show players when settings opens

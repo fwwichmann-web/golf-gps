@@ -188,6 +188,23 @@ html, body {
 }
 
 /* === GPS Accuracy Bar === */
+/* Pace of Play Bar */
+.pace-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 16px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  margin: 0 12px 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pace-status { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+.pace-ok   { color: #4caf50; }
+.pace-slow { color: #f44336; }
+.pace-fast { color: #2196f3; }
+
 .gps-bar {
   display: flex;
   align-items: center;
