@@ -949,23 +949,35 @@ const App = {
     const shot = ShotTracker.markShot();
     if (shot) {
       ShotTracker.setClubForLastShot(club);
-      this._showNfcToast('⛳ ' + club + ' logged ✓');
+      this._incrementPlayerStroke(0);
+      this._showNfcToast('⛳ ' + club + ' — shot ' + this.currentHoleScores[0].strokes);
       this._updateShotsBadge();
       this._updateShotList();
       if (navigator.vibrate) navigator.vibrate(80);
     } else {
-      // Round not ready — retry once after a short delay
       setTimeout(() => {
         const s2 = ShotTracker.markShot();
         if (s2) {
           ShotTracker.setClubForLastShot(club);
-          this._showNfcToast('⛳ ' + club + ' logged ✓');
+          this._incrementPlayerStroke(0);
+          this._showNfcToast('⛳ ' + club + ' — shot ' + this.currentHoleScores[0].strokes);
           this._updateShotsBadge();
         } else {
           this._showNfcToast('⛳ ' + club + ' — tap again');
         }
       }, 800);
     }
+  },
+
+  _incrementPlayerStroke(playerIndex) {
+    if (!this.currentHoleScores[playerIndex]) return;
+    this.currentHoleScores[playerIndex].strokes++;
+    const hole = CourseData.getHole(this.scoringHole);
+    const players = Storage.getPlayers();
+    if (hole && players[playerIndex]) {
+      this._updatePlayerCardLive(playerIndex, players[playerIndex], hole);
+    }
+    this._renderScorecard();
   },
 
   _showNfcToast(message) {
