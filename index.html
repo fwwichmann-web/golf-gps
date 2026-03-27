@@ -162,6 +162,32 @@
     <div id="rd-scorecard" class="scorecard-mini"></div>
     <div class="section-label">CLUB DISTANCES</div>
     <div id="rd-clubs" class="club-stats"></div>
+    <div style="padding:12px 0 4px;">
+      <button id="btn-rd-edit" class="btn-secondary" style="width:100%">✏️ EDIT SCORES</button>
+    </div>
+  </div>
+</div>
+
+<!-- Score Edit Modal -->
+<div id="score-edit-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span id="edit-modal-title">Edit Scores</span>
+      <button id="btn-edit-close" class="hole-nav-btn">✕</button>
+    </div>
+    <div class="score-hole-header" style="margin:8px 0;">
+      <button id="edit-prev" class="hole-nav-btn">◄</button>
+      <div class="score-hole-info">
+        <span class="score-hole-label" id="edit-hole-label">Hole 1</span>
+        <span class="score-hole-sub" id="edit-hole-sub">Par 4</span>
+      </div>
+      <button id="edit-next" class="hole-nav-btn">►</button>
+    </div>
+    <div id="edit-player-cards"></div>
+    <div style="display:flex;gap:8px;padding-top:12px;">
+      <button id="btn-edit-save-hole" class="btn-primary" style="flex:1">SAVE HOLE</button>
+      <button id="btn-edit-done" class="btn-secondary" style="flex:1">DONE</button>
+    </div>
   </div>
 </div>
 

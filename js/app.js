@@ -1121,7 +1121,120 @@ const App = {
       clubs.innerHTML = '<div class="empty-msg">No GPS shots recorded</div>';
     }
 
+    document.getElementById('btn-rd-edit').onclick = () => this._openScoreEdit(round);
     document.getElementById('round-detail-modal').classList.remove('hidden');
+  },
+
+  _openScoreEdit(round) {
+    this._editRound = round;
+    this._editHole  = 1;
+
+    // Deep-copy hole scores so we can cancel without side effects
+    this._editScores = round.holes.map(h => ({
+      completed: h.completed,
+      playerScores: h.playerScores
+        ? h.playerScores.map(ps => ({ strokes: ps.strokes || 0, putts: ps.putts || 0 }))
+        : (round.players || []).map(() => ({ strokes: 0, putts: 0 }))
+    }));
+
+    document.getElementById('edit-modal-title').textContent = 'Edit — ' + (round.courseName || 'Round');
+    this._renderEditHole();
+
+    document.getElementById('edit-prev').onclick = () => {
+      if (this._editHole > 1) { this._editHole--; this._renderEditHole(); }
+    };
+    document.getElementById('edit-next').onclick = () => {
+      if (this._editHole < 18) { this._editHole++; this._renderEditHole(); }
+    };
+    document.getElementById('btn-edit-save-hole').onclick = () => this._saveEditHole();
+    document.getElementById('btn-edit-done').onclick     = () => this._finishScoreEdit();
+    document.getElementById('btn-edit-close').onclick    = () => {
+      document.getElementById('score-edit-modal').classList.add('hidden');
+    };
+
+    document.getElementById('score-edit-modal').classList.remove('hidden');
+  },
+
+  _renderEditHole() {
+    const h       = CourseData.getHole(this._editHole);
+    const players = this._editRound.players || [];
+    const scores  = this._editScores[this._editHole - 1].playerScores;
+
+    document.getElementById('edit-hole-label').textContent = 'Hole ' + this._editHole;
+    document.getElementById('edit-hole-sub').textContent   = 'Par ' + (h ? h.par : 4) + ' · SI ' + (h ? h.si : this._editHole);
+
+    const container = document.getElementById('edit-player-cards');
+    container.innerHTML = players.map((p, i) => {
+      const s = scores[i] || { strokes: 0, putts: 0 };
+      return '<div class="player-card">' +
+        '<div class="player-card-header"><span class="player-card-name">' + p.name + '</span></div>' +
+        '<div class="player-card-row"><span class="player-card-label">Strokes</span>' +
+          '<div class="counter-group">' +
+            '<button class="edit-counter" data-pi="' + i + '" data-field="strokes" data-delta="-1">−</button>' +
+            '<span class="counter-value" id="edit-strokes-' + i + '">' + s.strokes + '</span>' +
+            '<button class="edit-counter" data-pi="' + i + '" data-field="strokes" data-delta="1">+</button>' +
+          '</div></div>' +
+        '<div class="player-card-row"><span class="player-card-label">Putts</span>' +
+          '<div class="counter-group">' +
+            '<button class="edit-counter" data-pi="' + i + '" data-field="putts" data-delta="-1">−</button>' +
+            '<span class="counter-value" id="edit-putts-' + i + '">' + s.putts + '</span>' +
+            '<button class="edit-counter" data-pi="' + i + '" data-field="putts" data-delta="1">+</button>' +
+          '</div></div>' +
+      '</div>';
+    }).join('');
+
+    container.querySelectorAll('.edit-counter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pi    = parseInt(btn.dataset.pi);
+        const field = btn.dataset.field;
+        const delta = parseInt(btn.dataset.delta);
+        scores[pi][field] = Math.max(0, scores[pi][field] + delta);
+        document.getElementById('edit-' + field + '-' + pi).textContent = scores[pi][field];
+        if (navigator.vibrate) navigator.vibrate(20);
+      });
+    });
+  },
+
+  _saveEditHole() {
+    const holeIdx = this._editHole - 1;
+    const h       = CourseData.getHole(this._editHole);
+    const players = this._editRound.players || [];
+    const scores  = this._editScores[holeIdx].playerScores;
+
+    const playerScores = scores.map((s, i) => ({
+      strokes: s.strokes,
+      putts:   s.putts,
+      stablefordPoints: Scoring.stablefordPoints(s.strokes, h ? h.par : 4, h ? h.si : this._editHole, players[i] ? players[i].handicap : 0) || 0
+    }));
+
+    const hole = this._editRound.holes[holeIdx];
+    hole.playerScores  = playerScores;
+    hole.completed     = playerScores.some(ps => ps.strokes > 0);
+    if (playerScores.length > 0) {
+      hole.totalStrokes = playerScores[0].strokes;
+      hole.putts        = playerScores[0].putts;
+      hole.scoreToPar   = playerScores[0].strokes - (h ? h.par : 4);
+    }
+
+    // Advance to next hole automatically
+    if (this._editHole < 18) { this._editHole++; this._renderEditHole(); }
+    if (navigator.vibrate) navigator.vibrate(50);
+  },
+
+  _finishScoreEdit() {
+    // Recalculate summary and persist
+    this._editRound.summary = (() => {
+      const saved = ShotTracker.round;
+      ShotTracker.round = this._editRound;
+      const s = ShotTracker.getRoundSummary();
+      ShotTracker.round = saved;
+      return s;
+    })();
+    Storage.saveRound(this._editRound);
+    document.getElementById('score-edit-modal').classList.add('hidden');
+    // Refresh the detail view with updated data
+    this._showRoundDetail(this._editRound);
+    this._renderHistory();
   },
 
   // === NFC ===
