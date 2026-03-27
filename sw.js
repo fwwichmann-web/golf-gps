@@ -1,4 +1,4 @@
-const CACHE_NAME = 'golf-gps-v3';
+const CACHE_NAME = 'golf-gps-v4';
 
 const APP_SHELL = [
   './',
@@ -12,6 +12,7 @@ const APP_SHELL = [
   './js/scoring.js',
   './js/nfc.js',
   './js/course-mapper.js',
+  './js/hole-map.js',
   './js/app.js',
   './manifest.json'
 ];

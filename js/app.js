@@ -114,6 +114,13 @@ const App = {
     document.getElementById('btn-prev-hole').addEventListener('click', () => this._changeHole(-1));
     document.getElementById('btn-next-hole').addEventListener('click', () => this._changeHole(1));
 
+    // Init hole map when the details panel is first opened
+    document.getElementById('hole-map-details').addEventListener('toggle', e => {
+      if (e.target.open) {
+        HoleMap.init(this.currentHole);
+      }
+    });
+
     // Swipe support
     let touchStartX = 0;
     const gpsScreen = document.getElementById('screen-gps');
@@ -134,6 +141,9 @@ const App = {
     this.currentHole = newHole;
     this._renderHoleInfo();
     this._updateDistances();
+    if (document.getElementById('hole-map-details').open) {
+      HoleMap.showHole(this.currentHole);
+    }
   },
 
   _renderHoleInfo() {
@@ -169,6 +179,9 @@ const App = {
     label.textContent = 'GPS: ' + GpsManager.getAccuracyLabel();
 
     this._updateDistances();
+    if (document.getElementById('hole-map-details').open) {
+      HoleMap.updatePlayerPosition(pos.lat, pos.lng);
+    }
   },
 
   _updateDistances() {
