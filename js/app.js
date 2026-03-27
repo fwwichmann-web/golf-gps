@@ -74,6 +74,20 @@ const App = {
         if (screenId === 'screen-scorecard') {
           this._renderFullScorecard();
         }
+        if (screenId === 'screen-summary') {
+          // Active round takes priority, then fall back to last saved round
+          if (ShotTracker.hasActiveRound()) {
+            this._renderSummary(ShotTracker.round);
+          } else {
+            const rounds = Storage.getRounds();
+            if (rounds.length > 0) {
+              this._renderSummary(rounds[rounds.length - 1]);
+            } else {
+              document.getElementById('summary-leaderboard').innerHTML =
+                '<div class="empty-msg">No rounds yet</div>';
+            }
+          }
+        }
       });
     });
 
@@ -710,7 +724,15 @@ const App = {
   // === Round Summary ===
 
   _renderSummary(roundData) {
-    const summary = roundData.summary || ShotTracker.getRoundSummary();
+    if (!roundData) return;
+    // For in-progress rounds use live calculation; for completed use stored summary
+    let summary = roundData.summary;
+    if (!summary) {
+      const saved = ShotTracker.round;
+      ShotTracker.round = roundData;
+      summary = ShotTracker.getRoundSummary();
+      ShotTracker.round = saved;
+    }
     if (!summary) return;
 
     document.getElementById('summary-date').textContent =
