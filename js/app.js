@@ -714,10 +714,88 @@ const App = {
     });
   },
 
+  _buildLifetimeClubStats(rounds) {
+    // Aggregate across all rounds using weighted average
+    const map = {};
+    let roundsWithShots = 0;
+    for (const round of rounds) {
+      if (!round.summary || !round.summary.clubStats) continue;
+      const stats = round.summary.clubStats;
+      if (Object.keys(stats).length === 0) continue;
+      roundsWithShots++;
+      for (const [club, s] of Object.entries(stats)) {
+        if (!map[club]) map[club] = { totalDist: 0, count: 0, max: 0, min: Infinity };
+        map[club].totalDist += s.avgDistance * s.count;
+        map[club].count     += s.count;
+        map[club].max        = Math.max(map[club].max, s.maxDistance);
+        map[club].min        = Math.min(map[club].min, s.minDistance);
+      }
+    }
+    const result = [];
+    for (const [club, d] of Object.entries(map)) {
+      result.push({
+        club,
+        avg:   Math.round(d.totalDist / d.count),
+        max:   d.max,
+        min:   d.min === Infinity ? 0 : d.min,
+        count: d.count
+      });
+    }
+    // Sort by CLUBS order, fallback to avg desc
+    result.sort((a, b) => {
+      const ia = CLUBS.indexOf(a.club);
+      const ib = CLUBS.indexOf(b.club);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      return b.avg - a.avg;
+    });
+    return { stats: result, roundsWithShots };
+  },
+
+  _renderLifetimeClubs(rounds) {
+    const container = document.getElementById('lifetime-clubs');
+    const badge = document.getElementById('clubs-round-count');
+    const { stats, roundsWithShots } = this._buildLifetimeClubStats(rounds);
+
+    if (stats.length === 0) {
+      badge.textContent = '';
+      container.innerHTML = '<div class="empty-msg">Complete a round with GPS shots to see distances</div>';
+      return;
+    }
+
+    badge.textContent = roundsWithShots + ' round' + (roundsWithShots !== 1 ? 's' : '');
+
+    // Find longest club for bar scaling
+    const maxAvg = Math.max(...stats.map(s => s.avg));
+
+    container.innerHTML = stats.map(s => {
+      const barWidth = Math.round((s.avg / maxAvg) * 100);
+      const minPct   = Math.round(((s.min - 0) / maxAvg) * 100);
+      const rangePct = Math.round(((s.max - s.min) / maxAvg) * 100);
+
+      return '<div class="lifetime-club-row">' +
+        '<span class="lifetime-club-name">' + s.club + '</span>' +
+        '<div>' +
+          '<span class="lifetime-club-avg">' + s.avg + '</span>' +
+          '<span class="lifetime-club-avg-label">m avg</span>' +
+        '</div>' +
+        '<div class="lifetime-club-range">' +
+          '<div style="font-size:10px;color:var(--text-muted)">' + s.min + '–' + s.max + 'm</div>' +
+          '<div class="lifetime-club-bar-wrap">' +
+            '<div class="lifetime-club-bar" style="margin-left:' + minPct + '%;width:' + Math.max(rangePct, 2) + '%"></div>' +
+            '<div class="lifetime-club-bar-avg" style="left:' + barWidth + '%"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="lifetime-club-meta">' + s.count + ' shots</div>' +
+      '</div>';
+    }).join('');
+  },
+
   _renderHistory() {
     const rounds = Storage.getRounds().slice().reverse(); // newest first
     const countEl = document.getElementById('history-count');
     const list = document.getElementById('history-list');
+
+    this._renderLifetimeClubs(rounds);
 
     countEl.textContent = rounds.length + ' round' + (rounds.length !== 1 ? 's' : '');
 
