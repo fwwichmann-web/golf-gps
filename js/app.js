@@ -498,7 +498,7 @@ const App = {
       if (h.completed && h.playerScores) {
         h.playerScores.forEach((ps, pi) => {
           const diff = ps.strokes - h.par;
-          const cls = diff > 0 ? 'score-over' : (diff < 0 ? 'score-under' : 'score-even');
+          const cls = diff <= -2 ? 'score-eagle' : diff === -1 ? 'score-birdie' : diff === 0 ? 'score-par' : diff === 1 ? 'score-bogey' : 'score-double';
           html += '<td class="' + cls + '">' + ps.strokes + '</td>' +
                   '<td>' + (ps.stablefordPoints || 0) + '</td>';
           if (i < 9) { playerFrontStrokes[pi] += ps.strokes; playerFrontPts[pi] += ps.stablefordPoints || 0; }
@@ -509,7 +509,7 @@ const App = {
           const strokes = s.strokes || 0;
           const pts = strokes > 0 ? (Scoring.stablefordPoints(strokes, h.par, h.si, players[pi] ? players[pi].handicap : 0) || 0) : null;
           const diff = strokes - h.par;
-          const cls = strokes > 0 ? (diff > 0 ? 'score-over' : (diff < 0 ? 'score-under' : 'score-even')) : '';
+          const cls = strokes > 0 ? (diff <= -2 ? 'score-eagle' : diff === -1 ? 'score-birdie' : diff === 0 ? 'score-par' : diff === 1 ? 'score-bogey' : 'score-double') : '';
           html += '<td class="' + cls + '">' + (strokes || '-') + '</td>' +
                   '<td>' + (pts !== null ? pts : '-') + '</td>';
           if (strokes > 0) {
@@ -931,7 +931,8 @@ const App = {
       html += '<tr><td>' + h.number + '</td><td>' + h.par + '</td>';
       if (h.playerScores) {
         h.playerScores.forEach(ps => {
-          const cls = (ps.strokes - h.par) > 0 ? 'score-over' : ((ps.strokes - h.par) < 0 ? 'score-under' : 'score-even');
+          const d = ps.strokes - h.par;
+          const cls = d <= -2 ? 'score-eagle' : d === -1 ? 'score-birdie' : d === 0 ? 'score-par' : d === 1 ? 'score-bogey' : 'score-double';
           html += '<td class="' + cls + '">' + ps.strokes + '</td><td>' + (ps.stablefordPoints || 0) + '</td>';
         });
       } else {

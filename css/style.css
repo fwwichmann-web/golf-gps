@@ -354,9 +354,12 @@ html, body {
   color: var(--text-secondary);
   font-size: 10px;
 }
-.score-over { color: var(--accent-red); }
-.score-under { color: var(--accent-green); }
-.score-even { color: var(--text-primary); }
+/* Score colour coding — traditional golf card style */
+.score-eagle  { background: #f5c518; color: #000; font-weight: 700; border-radius: 50%; width: 24px; height: 24px; line-height: 24px; text-align: center; display: inline-block; }
+.score-birdie { background: #e53935; color: #fff; font-weight: 600; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; display: inline-block; }
+.score-par    { color: var(--text-primary); }
+.score-bogey  { background: #1565c0; color: #fff; font-weight: 500; border-radius: 3px; width: 22px; height: 22px; line-height: 22px; text-align: center; display: inline-block; }
+.score-double { background: #1565c0; color: #fff; font-weight: 700; border-radius: 3px; outline: 2px solid #1565c0; outline-offset: 2px; width: 22px; height: 22px; line-height: 22px; text-align: center; display: inline-block; }
 .scorecard-current-hole { background: rgba(74,144,226,0.12); font-style: italic; }
 
 /* === Round Summary === */
