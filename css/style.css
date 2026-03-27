@@ -357,6 +357,7 @@ html, body {
 .score-over { color: var(--accent-red); }
 .score-under { color: var(--accent-green); }
 .score-even { color: var(--text-primary); }
+.scorecard-current-hole { background: rgba(74,144,226,0.12); font-style: italic; }
 
 /* === Round Summary === */
 .summary-header {

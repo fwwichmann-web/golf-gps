@@ -398,6 +398,7 @@ const App = {
         this.currentHoleScores[pi][field] = Math.max(0, this.currentHoleScores[pi][field] + delta);
         this._updatePlayerCardLive(pi, players[pi], hole);
         Storage.saveLiveScores(this.scoringHole, this.currentHoleScores);
+        this._renderScorecard();
         if (navigator.vibrate) navigator.vibrate(20);
       });
     });
@@ -490,7 +491,10 @@ const App = {
 
       if (i < 9) frontPar += h.par; else backPar += h.par;
 
-      html += '<tr><td>' + h.number + '</td><td>' + h.par + '</td>';
+      const isCurrentHole = (h.number === this.scoringHole);
+      const liveScores = isCurrentHole ? this.currentHoleScores : null;
+      const rowCls = isCurrentHole ? ' class="scorecard-current-hole"' : '';
+      html += '<tr' + rowCls + '><td>' + h.number + '</td><td>' + h.par + '</td>';
       if (h.completed && h.playerScores) {
         h.playerScores.forEach((ps, pi) => {
           const diff = ps.strokes - h.par;
@@ -499,6 +503,19 @@ const App = {
                   '<td>' + (ps.stablefordPoints || 0) + '</td>';
           if (i < 9) { playerFrontStrokes[pi] += ps.strokes; playerFrontPts[pi] += ps.stablefordPoints || 0; }
           else        { playerBackStrokes[pi]  += ps.strokes; playerBackPts[pi]  += ps.stablefordPoints || 0; }
+        });
+      } else if (liveScores) {
+        liveScores.forEach((s, pi) => {
+          const strokes = s.strokes || 0;
+          const pts = strokes > 0 ? (Scoring.stablefordPoints(strokes, h.par, h.si, players[pi] ? players[pi].handicap : 0) || 0) : null;
+          const diff = strokes - h.par;
+          const cls = strokes > 0 ? (diff > 0 ? 'score-over' : (diff < 0 ? 'score-under' : 'score-even')) : '';
+          html += '<td class="' + cls + '">' + (strokes || '-') + '</td>' +
+                  '<td>' + (pts !== null ? pts : '-') + '</td>';
+          if (strokes > 0) {
+            if (i < 9) { playerFrontStrokes[pi] += strokes; playerFrontPts[pi] += pts || 0; }
+            else        { playerBackStrokes[pi]  += strokes; playerBackPts[pi]  += pts || 0; }
+          }
         });
       } else {
         players.forEach(() => { html += '<td>-</td><td>-</td>'; });
