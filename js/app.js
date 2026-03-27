@@ -51,13 +51,13 @@ const App = {
     // Init scoring
     this._initScoring();
 
-    // Handle NFC URL tag (?club=Driver) — fallback for devices where Web NFC is blocked
-    this._handleNfcUrlTag();
-
-    // Render initial state
+    // Render initial state first so player card DOM exists
     this._renderHoleInfo();
     this._renderScoringScreen();
     this._renderScorecard();
+
+    // Handle NFC URL tag after DOM is ready
+    this._handleNfcUrlTag();
   },
 
   // === Navigation ===
@@ -972,11 +972,7 @@ const App = {
   _incrementPlayerStroke(playerIndex) {
     if (!this.currentHoleScores[playerIndex]) return;
     this.currentHoleScores[playerIndex].strokes++;
-    const hole = CourseData.getHole(this.scoringHole);
-    const players = Storage.getPlayers();
-    if (hole && players[playerIndex]) {
-      this._updatePlayerCardLive(playerIndex, players[playerIndex], hole);
-    }
+    this._renderScoringScreen();
     this._renderScorecard();
   },
 
