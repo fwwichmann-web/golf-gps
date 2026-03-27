@@ -68,9 +68,11 @@ const App = {
         const screenId = btn.dataset.screen;
         this._showScreen(screenId);
 
-        // Load mapper on demand
         if (screenId === 'screen-mapper' && typeof CourseMapper !== 'undefined') {
           CourseMapper.init();
+        }
+        if (screenId === 'screen-scorecard') {
+          this._renderFullScorecard();
         }
       });
     });
@@ -595,6 +597,114 @@ const App = {
 
     miniCard.innerHTML = html;
     this._renderLiveLeaderboard();
+    this._renderFullScorecard();
+  },
+
+  _renderFullScorecard() {
+    const holesEl    = document.getElementById('sc-holes');
+    const totalsEl   = document.getElementById('sc-totals');
+    const headersEl  = document.getElementById('sc-player-headers');
+    const infoEl     = document.getElementById('sc-round-info');
+    if (!holesEl) return;
+
+    const round   = ShotTracker.round;
+    const players = (round && round.players) || Storage.getPlayers();
+    const course  = CourseData.getCourse();
+
+    if (infoEl) infoEl.textContent = round ? (round.tee + ' Tees · ' + new Date(round.date).toLocaleDateString()) : 'Start a round to see scores';
+
+    // Player header strip
+    headersEl.innerHTML = '<div class="sc-ph-hole">H</div><div class="sc-ph-par">Par</div>' +
+      players.map(p => '<div class="sc-ph-player">' + p.name.substring(0, 6) + '</div>').join('');
+
+    // Accumulators
+    const totStrokes  = players.map(() => 0);
+    const totPts      = players.map(() => 0);
+    const f9Strokes   = players.map(() => 0);
+    const f9Pts       = players.map(() => 0);
+    const b9Strokes   = players.map(() => 0);
+    const b9Pts       = players.map(() => 0);
+    let frontPar = 0, backPar = 0;
+
+    let holesHtml = '';
+
+    for (let i = 0; i < 18; i++) {
+      const h = round ? round.holes[i] : CourseData.getHole(i + 1);
+      if (!h) continue;
+      const hNum = h.number || (i + 1);
+      const hPar = h.par || 4;
+      const hSi  = h.si  || (i + 1);
+
+      if (i < 9) frontPar += hPar; else backPar += hPar;
+
+      // OUT row between 9 and 10
+      if (i === 9) {
+        holesHtml += '<div class="sc-subtotal-row">' +
+          '<div class="sc-hole-num">OUT</div><div class="sc-hole-par">' + frontPar + '</div>' +
+          players.map((_, pi) => {
+            const s = f9Strokes[pi], p = f9Pts[pi];
+            return '<div class="sc-hole-score">' + (s || '-') + '<span class="sc-pts-inline">' + (s ? p : '') + '</span></div>';
+          }).join('') +
+        '</div>';
+      }
+
+      const isCurrentHole = round && hNum === this.scoringHole;
+      const rowCls = isCurrentHole ? ' sc-hole-row sc-active-hole' : ' sc-hole-row';
+
+      holesHtml += '<div class="' + rowCls + '">' +
+        '<div class="sc-hole-num">' + hNum + '</div>' +
+        '<div class="sc-hole-par">' + hPar + '</div>';
+
+      if (round && h.completed && h.playerScores) {
+        h.playerScores.forEach((ps, pi) => {
+          const diff = ps.strokes - hPar;
+          const cls  = diff <= -2 ? 'score-eagle' : diff === -1 ? 'score-birdie' : diff === 0 ? 'score-par' : diff === 1 ? 'score-bogey' : 'score-double';
+          const pts  = ps.stablefordPoints || 0;
+          holesHtml += '<div class="sc-hole-score"><span class="' + cls + '">' + ps.strokes + '</span><span class="sc-pts-inline">' + pts + 'p</span></div>';
+          if (i < 9) { f9Strokes[pi] += ps.strokes; f9Pts[pi] += pts; }
+          else        { b9Strokes[pi] += ps.strokes; b9Pts[pi] += pts; }
+          totStrokes[pi] += ps.strokes;
+          totPts[pi]     += pts;
+        });
+      } else if (isCurrentHole) {
+        this.currentHoleScores.forEach((s, pi) => {
+          const strokes = s.strokes || 0;
+          const pts     = strokes > 0 ? (Scoring.stablefordPoints(strokes, hPar, hSi, players[pi] ? players[pi].handicap : 0) || 0) : null;
+          const diff    = strokes - hPar;
+          const cls     = strokes > 0 ? (diff <= -2 ? 'score-eagle' : diff === -1 ? 'score-birdie' : diff === 0 ? 'score-par' : diff === 1 ? 'score-bogey' : 'score-double') : '';
+          holesHtml += '<div class="sc-hole-score"><span class="' + cls + '">' + (strokes || '·') + '</span>' + (pts !== null ? '<span class="sc-pts-inline">' + pts + 'p</span>' : '') + '</div>';
+        });
+      } else {
+        players.forEach(() => { holesHtml += '<div class="sc-hole-score sc-blank">·</div>'; });
+      }
+
+      holesHtml += '</div>';
+    }
+
+    // IN row
+    holesHtml += '<div class="sc-subtotal-row">' +
+      '<div class="sc-hole-num">IN</div><div class="sc-hole-par">' + backPar + '</div>' +
+      players.map((_, pi) => {
+        const s = b9Strokes[pi], p = b9Pts[pi];
+        return '<div class="sc-hole-score">' + (s || '-') + '<span class="sc-pts-inline">' + (s ? p : '') + '</span></div>';
+      }).join('') +
+    '</div>';
+
+    holesEl.innerHTML = holesHtml;
+
+    // TOTAL row
+    totalsEl.innerHTML = '<div class="sc-total-row">' +
+      '<div class="sc-hole-num">TOT</div><div class="sc-hole-par">' + (frontPar + backPar) + '</div>' +
+      players.map((_, pi) => {
+        const s = totStrokes[pi], p = totPts[pi];
+        const diff = s > 0 ? s - (frontPar + backPar) : null;
+        const diffStr = diff === null ? '' : diff === 0 ? 'E' : (diff > 0 ? '+' + diff : '' + diff);
+        return '<div class="sc-hole-score sc-total-cell">' +
+          '<span class="sc-total-strokes">' + (s || '-') + '</span>' +
+          '<span class="sc-total-sub">' + (s ? diffStr + ' · ' + p + 'p' : '') + '</span>' +
+        '</div>';
+      }).join('') +
+    '</div>';
   },
 
   // === Round Summary ===
