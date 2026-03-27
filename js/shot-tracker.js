@@ -63,22 +63,23 @@ const ShotTracker = {
 
   markShot() {
     if (!this.round) return null;
-    const pos = GpsManager.getLastPosition();
-    if (!pos) return null;
+    const pos = GpsManager.getLastPosition(); // may be null — shot still recorded
 
     const holeData = this.getCurrentHoleData();
     const shotIndex = holeData.shots.length + 1;
 
     let distFromPrev = null;
-    if (holeData.shots.length > 0) {
+    if (pos && holeData.shots.length > 0) {
       const prev = holeData.shots[holeData.shots.length - 1];
-      distFromPrev = Math.round(Distance.haversineMeters(prev.lat, prev.lng, pos.lat, pos.lng));
+      if (prev.lat && prev.lng) {
+        distFromPrev = Math.round(Distance.haversineMeters(prev.lat, prev.lng, pos.lat, pos.lng));
+      }
     }
 
     const shot = {
       index: shotIndex,
-      lat: pos.lat,
-      lng: pos.lng,
+      lat: pos ? pos.lat : null,
+      lng: pos ? pos.lng : null,
       timestamp: new Date().toISOString(),
       club: null,
       distanceFromPrevious: distFromPrev

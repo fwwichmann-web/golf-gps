@@ -1,4 +1,4 @@
-const CACHE_NAME = 'golf-gps-v2';
+const CACHE_NAME = 'golf-gps-v3';
 
 const APP_SHELL = [
   './',
@@ -9,6 +9,9 @@ const APP_SHELL = [
   './js/course-data.js',
   './js/gps.js',
   './js/shot-tracker.js',
+  './js/scoring.js',
+  './js/nfc.js',
+  './js/course-mapper.js',
   './js/app.js',
   './manifest.json'
 ];
@@ -51,9 +54,9 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // App shell: cache-first
+  // App shell: cache-first, ignore query params for HTML navigation
   event.respondWith(
-    caches.match(event.request)
+    caches.match(event.request, { ignoreSearch: true })
       .then(cached => cached || fetch(event.request))
   );
 });

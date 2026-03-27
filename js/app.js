@@ -925,26 +925,41 @@ const App = {
     const club = params.get('club');
     if (!club) return;
 
-    // Clean the URL immediately so refresh doesn't re-trigger
-    const cleanUrl = window.location.pathname;
-    window.history.replaceState({}, '', cleanUrl);
+    // Clean URL immediately so refresh doesn't re-trigger
+    window.history.replaceState({}, '', window.location.pathname);
 
-    // Wait for GPS to be ready, then mark the shot
-    const tryMark = (attempts) => {
-      const pos = GpsManager.getLastPosition();
-      if (pos) {
-        this._handleNfcShot(null, club);
-        // Show brief toast
-        this._showNfcToast(club);
-      } else if (attempts > 0) {
-        setTimeout(() => tryMark(attempts - 1), 500);
-      } else {
-        // No GPS yet — still record shot, GPS will be null
-        this._handleNfcShot(null, club);
-        this._showNfcToast(club + ' (no GPS)');
-      }
-    };
-    setTimeout(() => tryMark(6), 300); // wait up to 3s for GPS
+    // Show toast immediately so user knows it worked
+    this._showNfcToast('⛳ ' + club + ' — logging...');
+
+    // Auto-start round if needed
+    if (!ShotTracker.hasActiveRound()) {
+      ShotTracker.startRound(this.currentTee);
+    }
+    if (ShotTracker.round) {
+      ShotTracker.round.currentHole = this.currentHole;
+    }
+
+    // Record shot now (GPS may be null — that's ok)
+    const shot = ShotTracker.markShot();
+    if (shot) {
+      ShotTracker.setClubForLastShot(club);
+      this._showNfcToast('⛳ ' + club + ' logged ✓');
+      this._updateShotsBadge();
+      this._updateShotList();
+      if (navigator.vibrate) navigator.vibrate(80);
+    } else {
+      // Round not ready — retry once after a short delay
+      setTimeout(() => {
+        const s2 = ShotTracker.markShot();
+        if (s2) {
+          ShotTracker.setClubForLastShot(club);
+          this._showNfcToast('⛳ ' + club + ' logged ✓');
+          this._updateShotsBadge();
+        } else {
+          this._showNfcToast('⛳ ' + club + ' — tap again');
+        }
+      }, 800);
+    }
   },
 
   _showNfcToast(message) {
@@ -1051,7 +1066,7 @@ const App = {
     }
 
     const shot = ShotTracker.markShot();
-    if (!shot) return; // no GPS yet
+    if (!shot) return;
 
     if (club) {
       ShotTracker.setClubForLastShot(club);
