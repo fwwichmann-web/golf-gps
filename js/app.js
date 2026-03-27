@@ -32,7 +32,7 @@ const App = {
     this._bindHoleNav();
     this._bindSettings();
     this._bindShotTracker();
-    this._bindNfc();
+    this._bindNfc();  // NFC activates only on explicit button tap (browser requirement)
 
     // Start GPS
     GpsManager.onPositionUpdate(pos => this._onGpsUpdate(pos));
@@ -917,68 +917,85 @@ const App = {
 
   // === NFC ===
 
-  async _bindNfc() {
-    const openBtn = document.getElementById('btn-nfc-setup-open');
-    const closeBtn = document.getElementById('btn-nfc-modal-close');
+  _bindNfc() {
     const modal = document.getElementById('nfc-modal');
-    const registerBtn = document.getElementById('btn-nfc-register');
 
     // Populate club select
-    const select = document.getElementById('nfc-club-select');
-    select.innerHTML = CLUBS.map(c => '<option value="' + c + '">' + c + '</option>').join('');
+    document.getElementById('nfc-club-select').innerHTML =
+      CLUBS.map(c => '<option value="' + c + '">' + c + '</option>').join('');
 
-    // Open / close
-    openBtn.addEventListener('click', () => {
+    // Open modal
+    document.getElementById('btn-nfc-setup-open').addEventListener('click', () => {
       document.getElementById('settings-modal').classList.add('hidden');
       NfcManager.setPlayMode();
+      this._setNfcRegisterStatus('');
       this._renderNfcTagList();
-      this._updateNfcStatusBadge();
+      // Show correct step
+      if (NfcManager.scanning) {
+        this._showNfcStep('register');
+      } else {
+        this._showNfcStep('enable');
+      }
       modal.classList.remove('hidden');
     });
-    closeBtn.addEventListener('click', () => {
+
+    // Close modal
+    document.getElementById('btn-nfc-modal-close').addEventListener('click', () => {
       NfcManager.setPlayMode();
       this._setNfcRegisterStatus('');
       modal.classList.add('hidden');
     });
 
-    // Register flow: tap button → switch to register mode → next tag read maps to selected club
-    registerBtn.addEventListener('click', () => {
+    // Step 1: ENABLE NFC button — must be called from user gesture
+    document.getElementById('btn-nfc-enable').addEventListener('click', async () => {
       if (!NfcManager.isSupported()) {
-        this._setNfcRegisterStatus('NFC not supported on this device/browser.', 'error');
+        this._showNfcEnableError('NFC not supported. Use Chrome on Android.');
         return;
       }
-      const club = document.getElementById('nfc-club-select').value;
-      this._setNfcRegisterStatus('Hold phone near the ' + club + ' grip tag...', 'waiting');
-      document.getElementById('nfc-dot').className = 'nfc-dot waiting';
+      const btn = document.getElementById('btn-nfc-enable');
+      btn.textContent = 'Activating...';
+      btn.disabled = true;
 
-      NfcManager.setRegisterMode((uid) => {
-        NfcManager.mapTagToClub(uid, club);
-        NfcManager.setPlayMode();
-        this._setNfcRegisterStatus(club + ' registered!', 'success');
-        document.getElementById('nfc-dot').className = 'nfc-dot active';
-        this._renderNfcTagList();
-        if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
-      });
-    });
-
-    // Start NFC scanning (play mode)
-    if (NfcManager.isSupported()) {
       const result = await NfcManager.start((uid, club) => {
         this._handleNfcShot(uid, club);
       });
 
+      btn.textContent = 'ENABLE NFC';
+      btn.disabled = false;
+
       if (result.ok) {
         this._showNfcActiveBar(true);
-        document.getElementById('nfc-status-label').textContent = 'Ready';
-        document.getElementById('nfc-dot').className = 'nfc-dot active';
+        this._showNfcStep('register');
       } else {
-        document.getElementById('nfc-status-label').textContent = result.error;
-        document.getElementById('nfc-dot').className = 'nfc-dot error';
+        this._showNfcEnableError(result.error);
       }
-    } else {
-      document.getElementById('nfc-status-label').textContent = 'Not supported';
-      document.getElementById('nfc-dot').className = 'nfc-dot error';
-    }
+    });
+
+    // Step 2: TAP TAG TO REGISTER
+    document.getElementById('btn-nfc-register').addEventListener('click', () => {
+      const club = document.getElementById('nfc-club-select').value;
+      this._setNfcRegisterStatus('Hold phone to the ' + club + ' tag...', 'waiting');
+
+      NfcManager.setRegisterMode((uid) => {
+        NfcManager.mapTagToClub(uid, club);
+        NfcManager.setPlayMode();
+        this._setNfcRegisterStatus(club + ' registered! ✓', 'success');
+        this._renderNfcTagList();
+        if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
+      });
+    });
+  },
+
+  _showNfcStep(step) {
+    document.getElementById('nfc-step-enable').classList.toggle('hidden', step !== 'enable');
+    document.getElementById('nfc-step-register').classList.toggle('hidden', step !== 'register');
+  },
+
+  _showNfcEnableError(msg) {
+    const el = document.getElementById('nfc-enable-error');
+    el.textContent = msg;
+    el.className = 'nfc-register-status error';
+    el.classList.remove('hidden');
   },
 
   _handleNfcShot(uid, club) {

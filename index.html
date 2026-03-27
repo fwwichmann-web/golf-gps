@@ -255,32 +255,41 @@
 <!-- NFC Setup Modal -->
 <div id="nfc-modal" class="modal hidden">
   <div class="modal-content nfc-modal-content">
-    <div class="nfc-modal-header">
-      <h3>NFC Club Tags</h3>
-      <div class="nfc-status">
-        <span class="nfc-dot" id="nfc-dot"></span>
-        <span id="nfc-status-label">Checking...</span>
+    <h3>NFC Club Tags</h3>
+
+    <!-- Step 1: Enable NFC (shown when not yet scanning) -->
+    <div id="nfc-step-enable">
+      <p class="nfc-step-intro">First, activate NFC scanning. Your browser will ask for permission.</p>
+      <button id="btn-nfc-enable" class="btn-primary" style="margin:12px 0;">ENABLE NFC</button>
+      <div id="nfc-enable-error" class="nfc-register-status hidden"></div>
+      <div class="nfc-help">
+        <p><b>Honor/Huawei phone?</b> First disable Honor Wallet from intercepting tags:<br>
+        Settings → Apps → Default apps → NFC default → set to <b>None</b> or <b>Chrome</b></p>
+        <p class="nfc-help-note">Requires Android Chrome. Must be on HTTPS (GitHub Pages ✓).</p>
       </div>
     </div>
 
-    <div class="section-label">REGISTERED CLUBS</div>
-    <div id="nfc-tag-list" class="nfc-tag-list">
-      <div class="empty-msg">No clubs registered yet</div>
+    <!-- Step 2: Register clubs (shown once NFC is active) -->
+    <div id="nfc-step-register" class="hidden">
+      <div class="nfc-status" style="margin-bottom:12px;">
+        <span class="nfc-dot active" id="nfc-dot"></span>
+        <span id="nfc-status-label">NFC Active — ready to scan</span>
+      </div>
+
+      <div class="section-label">REGISTERED CLUBS</div>
+      <div id="nfc-tag-list" class="nfc-tag-list">
+        <div class="empty-msg">No clubs registered yet</div>
+      </div>
+
+      <div class="section-label">REGISTER NEW CLUB</div>
+      <div class="nfc-register">
+        <select id="nfc-club-select"></select>
+        <button id="btn-nfc-register" class="btn-primary nfc-register-btn">TAP TAG TO REGISTER</button>
+        <div id="nfc-register-status" class="nfc-register-status hidden"></div>
+      </div>
     </div>
 
-    <div class="section-label">REGISTER NEW CLUB</div>
-    <div class="nfc-register">
-      <select id="nfc-club-select"></select>
-      <button id="btn-nfc-register" class="btn-primary nfc-register-btn">TAP TAG TO REGISTER</button>
-      <div id="nfc-register-status" class="nfc-register-status hidden"></div>
-    </div>
-
-    <div class="nfc-help">
-      <p>Stick an NFC sticker (NTAG213) inside each club's grip cap. During a round, tap the club to your phone — the shot is logged with GPS + club automatically.</p>
-      <p class="nfc-help-note">Requires Android Chrome. iPhone needs Safari 17+ (iOS 17+).</p>
-    </div>
-
-    <div class="modal-actions">
+    <div class="modal-actions" style="margin-top:12px;">
       <button id="btn-nfc-modal-close" class="btn-secondary">CLOSE</button>
     </div>
   </div>
