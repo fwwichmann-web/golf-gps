@@ -214,6 +214,15 @@ const App = {
     if (ShotTracker.hasActiveRound()) {
       this.scoringHole = ShotTracker.round.currentHole;
       this._loadHoleScores();
+      // Restore in-progress hole scores that survived page reload (e.g. NFC tap)
+      const live = Storage.getLiveScores();
+      if (live && live.holeNumber === this.scoringHole && live.scores) {
+        live.scores.forEach((s, i) => {
+          if (this.currentHoleScores[i]) {
+            this.currentHoleScores[i] = { strokes: s.strokes || 0, putts: s.putts || 0 };
+          }
+        });
+      }
     } else {
       this.scoringHole = 1;
     }
@@ -388,6 +397,7 @@ const App = {
         const delta = parseInt(btn.dataset.delta);
         this.currentHoleScores[pi][field] = Math.max(0, this.currentHoleScores[pi][field] + delta);
         this._updatePlayerCardLive(pi, players[pi], hole);
+        Storage.saveLiveScores(this.scoringHole, this.currentHoleScores);
         if (navigator.vibrate) navigator.vibrate(20);
       });
     });
@@ -427,6 +437,7 @@ const App = {
     }));
 
     ShotTracker.saveHoleScores(this.scoringHole, playerScores);
+    Storage.clearLiveScores();
 
     if (this.scoringHole < 18) {
       this.scoringHole++;
@@ -972,6 +983,7 @@ const App = {
   _incrementPlayerStroke(playerIndex) {
     if (!this.currentHoleScores[playerIndex]) return;
     this.currentHoleScores[playerIndex].strokes++;
+    Storage.saveLiveScores(this.scoringHole, this.currentHoleScores);
     this._renderScoringScreen();
     this._renderScorecard();
   },

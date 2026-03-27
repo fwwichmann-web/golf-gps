@@ -65,6 +65,20 @@ const Storage = {
     localStorage.removeItem('current_round');
   },
 
+  // --- In-progress hole scores (survives page reload) ---
+
+  getLiveScores() {
+    return this._get('live_scores'); // { holeNumber, scores: [{strokes,putts},...] }
+  },
+
+  saveLiveScores(holeNumber, scores) {
+    this._set('live_scores', { holeNumber, scores });
+  },
+
+  clearLiveScores() {
+    localStorage.removeItem('live_scores');
+  },
+
   // --- Players ---
 
   getPlayers() {
