@@ -735,6 +735,13 @@ const App = {
       players.push({ name, handicap });
     });
     Storage.savePlayers(players);
+    // Update active round players so stableford recalculates immediately
+    if (ShotTracker.round) {
+      ShotTracker.round.players = players;
+      ShotTracker._save();
+    }
+    this._renderScoringScreen();
+    this._renderScorecard();
   },
 
   // === History ===
