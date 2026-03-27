@@ -455,10 +455,63 @@ const App = {
     }
   },
 
+  _renderLiveLeaderboard() {
+    const el = document.getElementById('live-leaderboard');
+    if (!el) return;
+    const players = (ShotTracker.round && ShotTracker.round.players) || Storage.getPlayers();
+    const holes = ShotTracker.round ? ShotTracker.round.holes : [];
+
+    // Build per-player totals from completed holes + current live hole
+    const standings = players.map((p, pi) => {
+      let strokes = 0, par = 0, stableford = 0, holesPlayed = 0;
+      for (const h of holes) {
+        if (h.completed && h.playerScores && h.playerScores[pi]) {
+          const ps = h.playerScores[pi];
+          strokes += ps.strokes || 0;
+          par += h.par;
+          stableford += ps.stablefordPoints || 0;
+          holesPlayed++;
+        } else if (h.number === this.scoringHole) {
+          const s = this.currentHoleScores[pi];
+          if (s && s.strokes > 0) {
+            strokes += s.strokes;
+            par += h.par;
+            stableford += Scoring.stablefordPoints(s.strokes, h.par, h.si, p.handicap) || 0;
+            holesPlayed++;
+          }
+        }
+      }
+      const diff = strokes > 0 ? strokes - par : null;
+      return { name: p.name, strokes, diff, stableford, holesPlayed };
+    });
+
+    // Sort by stableford desc, then diff asc
+    standings.sort((a, b) => b.stableford - a.stableford || (a.diff || 0) - (b.diff || 0));
+
+    el.innerHTML = standings.map((s, idx) => {
+      const pos = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx + 1) + '.';
+      const diffStr = s.diff === null ? 'E' : s.diff === 0 ? 'E' : (s.diff > 0 ? '+' + s.diff : '' + s.diff);
+      const diffCls = s.diff === null || s.diff === 0 ? '' : s.diff > 0 ? 'lb-over' : 'lb-under';
+      const thru = s.holesPlayed > 0 ? 'Thru ' + s.holesPlayed : 'No scores';
+      return '<div class="lb-row">' +
+        '<span class="lb-pos">' + pos + '</span>' +
+        '<div class="lb-info">' +
+          '<span class="lb-name">' + s.name + '</span>' +
+          '<span class="lb-thru">' + thru + '</span>' +
+        '</div>' +
+        '<div class="lb-scores">' +
+          '<span class="lb-diff ' + diffCls + '">' + diffStr + '</span>' +
+          '<span class="lb-pts">' + s.stableford + ' pts</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  },
+
   _renderScorecard() {
     const miniCard = document.getElementById('running-scorecard');
     if (!ShotTracker.round) {
       miniCard.innerHTML = '<div class="empty-msg">Save a hole to see scorecard</div>';
+      this._renderLiveLeaderboard();
       return;
     }
 
@@ -541,6 +594,7 @@ const App = {
     html += '</tr></table>';
 
     miniCard.innerHTML = html;
+    this._renderLiveLeaderboard();
   },
 
   // === Round Summary ===
