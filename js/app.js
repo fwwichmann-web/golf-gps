@@ -608,13 +608,16 @@ const App = {
         return { name: t.name, pts, holesPlayed };
       });
       teamScores.sort((a, b) => b.pts - a.pts);
-      compLb.innerHTML = teamScores.map((t, idx) =>
-        '<div class="comp-team-row ' + (idx === 0 && t.pts > 0 ? 'comp-team-leading' : '') + '">' +
-          '<span class="comp-team-label">' + t.name + '</span>' +
-          '<span class="comp-team-pts">' + t.pts + ' pts</span>' +
-          (t.holesPlayed > 0 ? '<span class="comp-team-thru">Thru ' + t.holesPlayed + '</span>' : '') +
-        '</div>'
-      ).join('');
+      compLb.innerHTML =
+        teamScores.map((t, idx) =>
+          '<div class="comp-team-row ' + (idx === 0 && t.pts > 0 ? 'comp-team-leading' : '') + '">' +
+            '<span class="comp-team-label">' + t.name + '</span>' +
+            '<span class="comp-team-pts">' + t.pts + ' pts</span>' +
+            (t.holesPlayed > 0 ? '<span class="comp-team-thru">Thru ' + t.holesPlayed + '</span>' : '') +
+          '</div>'
+        ).join('') +
+        '<div class="comp-individual-label">Individual Stableford</div>' +
+        this._buildIndividualStablefordHtml(players, holes, ch);
 
     } else if (format === 'betterball4') {
       document.getElementById('comp-label').textContent = 'BETTER BALL — 4s';
@@ -640,8 +643,31 @@ const App = {
           '<span class="comp-team-label">Team Best Ball</span>' +
           '<span class="comp-team-pts">' + totalPts + ' pts</span>' +
           (holesPlayed > 0 ? '<span class="comp-team-thru">Thru ' + holesPlayed + '</span>' : '') +
-        '</div>';
+        '</div>' +
+        '<div class="comp-individual-label">Individual Stableford</div>' +
+        this._buildIndividualStablefordHtml(players, holes, ch);
     }
+  },
+
+  _buildIndividualStablefordHtml(players, holes, currentHole) {
+    return players.map((p, pi) => {
+      let pts = 0;
+      for (const h of holes) {
+        if (h.completed && h.playerScores && h.playerScores[pi]) {
+          pts += h.playerScores[pi].stablefordPoints || 0;
+        }
+      }
+      if (currentHole) {
+        const s = this.currentHoleScores[pi];
+        if (s && s.strokes > 0) {
+          pts += Scoring.stablefordPoints(s.strokes, currentHole.par, currentHole.si, p.handicap) || 0;
+        }
+      }
+      return '<div class="comp-indiv-row">' +
+        '<span class="comp-indiv-name">' + p.name + '</span>' +
+        '<span class="comp-indiv-pts">' + pts + ' pts</span>' +
+      '</div>';
+    }).join('');
   },
 
   _handleSaveHole() {

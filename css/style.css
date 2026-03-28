@@ -1166,6 +1166,25 @@ html, body {
 .comp-team-pts { font-size: 16px; font-weight: 700; color: var(--accent-green); }
 .comp-team-thru { font-size: 11px; color: var(--text-muted); }
 
+.comp-individual-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 6px 0 2px;
+}
+.comp-indiv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: var(--bg-surface);
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+.comp-indiv-name { font-size: 13px; color: var(--text-secondary); }
+.comp-indiv-pts  { font-size: 13px; font-weight: 600; color: var(--accent-green); }
+
 /* === NFC === */
 .nfc-active-bar {
   display: flex;
