@@ -372,11 +372,11 @@ html, body {
   font-size: 10px;
 }
 /* Score colour coding — traditional golf card style */
-.score-eagle  { background: #f5c518; color: #000; font-weight: 700; border-radius: 50%; width: 24px; height: 24px; line-height: 24px; text-align: center; display: inline-block; }
-.score-birdie { background: #e53935; color: #fff; font-weight: 600; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; display: inline-block; }
-.score-par    { color: var(--text-primary); }
-.score-bogey  { background: #1565c0; color: #fff; font-weight: 500; border-radius: 3px; width: 22px; height: 22px; line-height: 22px; text-align: center; display: inline-block; }
-.score-double { background: #1565c0; color: #fff; font-weight: 700; border-radius: 3px; outline: 2px solid #1565c0; outline-offset: 2px; width: 22px; height: 22px; line-height: 22px; text-align: center; display: inline-block; }
+.score-eagle  { background: #f5c518; color: #000; font-weight: 700; border-radius: 50%; width: 24px; height: 24px; line-height: 24px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
+.score-birdie { background: #e53935; color: #fff; font-weight: 600; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
+.score-par    { color: var(--text-primary); display: inline-block; }
+.score-bogey  { background: #1565c0; color: #fff; font-weight: 600; border-radius: 3px; width: 22px; height: 22px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
+.score-double { background: #b71c1c; color: #fff; font-weight: 700; border-radius: 3px; outline: 2px solid #b71c1c; outline-offset: 2px; width: 22px; height: 22px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
 .scorecard-current-hole { background: rgba(74,144,226,0.12); font-style: italic; }
 
 /* === Round Summary === */

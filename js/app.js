@@ -586,7 +586,7 @@ const App = {
         h.playerScores.forEach((ps, pi) => {
           const diff = ps.strokes - h.par;
           const cls = diff <= -2 ? 'score-eagle' : diff === -1 ? 'score-birdie' : diff === 0 ? 'score-par' : diff === 1 ? 'score-bogey' : 'score-double';
-          html += '<td class="' + cls + '">' + ps.strokes + '</td>' +
+          html += '<td><span class="' + cls + '">' + ps.strokes + '</span></td>' +
                   '<td>' + (ps.stablefordPoints || 0) + '</td>';
           if (i < 9) { playerFrontStrokes[pi] += ps.strokes; playerFrontPts[pi] += ps.stablefordPoints || 0; }
           else        { playerBackStrokes[pi]  += ps.strokes; playerBackPts[pi]  += ps.stablefordPoints || 0; }
@@ -597,7 +597,7 @@ const App = {
           const pts = strokes > 0 ? (Scoring.stablefordPoints(strokes, h.par, h.si, players[pi] ? players[pi].handicap : 0) || 0) : null;
           const diff = strokes - h.par;
           const cls = strokes > 0 ? (diff <= -2 ? 'score-eagle' : diff === -1 ? 'score-birdie' : diff === 0 ? 'score-par' : diff === 1 ? 'score-bogey' : 'score-double') : '';
-          html += '<td class="' + cls + '">' + (strokes || '-') + '</td>' +
+          html += '<td><span class="' + cls + '">' + (strokes || '-') + '</span></td>' +
                   '<td>' + (pts !== null ? pts : '-') + '</td>';
           if (strokes > 0) {
             if (i < 9) { playerFrontStrokes[pi] += strokes; playerFrontPts[pi] += pts || 0; }
@@ -1199,7 +1199,7 @@ const App = {
         h.playerScores.forEach(ps => {
           const d = ps.strokes - h.par;
           const cls = d <= -2 ? 'score-eagle' : d === -1 ? 'score-birdie' : d === 0 ? 'score-par' : d === 1 ? 'score-bogey' : 'score-double';
-          html += '<td class="' + cls + '">' + ps.strokes + '</td><td>' + (ps.stablefordPoints || 0) + '</td>';
+          html += '<td><span class="' + cls + '">' + ps.strokes + '</span></td><td>' + (ps.stablefordPoints || 0) + '</td>';
         });
       } else {
         players.forEach(() => { html += '<td>-</td><td>-</td>'; });
