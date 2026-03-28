@@ -63,6 +63,18 @@ const App = {
 
     // Start pace timer if a round is already active
     this._startPaceTimer();
+
+    // Auto-dismiss GPS overlay after 5s so app works without location permission
+    setTimeout(() => {
+      const overlay = document.getElementById('gps-overlay');
+      if (!overlay.classList.contains('hidden')) {
+        document.getElementById('gps-overlay-msg').textContent = 'GPS unavailable — distances will not show';
+        document.getElementById('btn-skip-gps').style.display = '';
+        document.getElementById('btn-skip-gps').onclick = () => overlay.classList.add('hidden');
+        // Auto-dismiss after a further 5s
+        setTimeout(() => overlay.classList.add('hidden'), 5000);
+      }
+    }, 5000);
   },
 
   // === Navigation ===
