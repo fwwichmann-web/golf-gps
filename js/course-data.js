@@ -16,7 +16,7 @@ const COURSE_DATA = {
   },
   holes: [
     {
-      number: 1, par: 4, si: 13,
+      number: 1, par: 4, si: 2,
       yardages: { Yellow: 442, White: 418, Blue: 364, Red: 331 },
       tee: { lat: -33.74000431079574, lng: 18.451811671257023 },
       green: {
@@ -27,7 +27,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 2, par: 4, si: 7,
+      number: 2, par: 4, si: 6,
       yardages: { Yellow: 388, White: 363, Blue: 336, Red: 331 },
       tee: { lat: -33.74410510528525, lng: 18.450419604778293 },
       green: {
@@ -38,7 +38,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 3, par: 3, si: 17,
+      number: 3, par: 3, si: 8,
       yardages: { Yellow: 171, White: 154, Blue: 143, Red: 140 },
       tee: { lat: -33.745046073662685, lng: 18.44675034284592 },
       green: {
@@ -49,7 +49,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 4, par: 5, si: 3,
+      number: 4, par: 5, si: 10,
       yardages: { Yellow: 523, White: 495, Blue: 472, Red: 448 },
       tee: { lat: -33.74727184990209, lng: 18.446648418903354 },
       green: {
@@ -60,7 +60,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 5, par: 4, si: 11,
+      number: 5, par: 4, si: 14,
       yardages: { Yellow: 369, White: 330, Blue: 317, Red: 312 },
       tee: { lat: -33.750494924446755, lng: 18.450202345848087 },
       green: {
@@ -71,7 +71,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 6, par: 5, si: 5,
+      number: 6, par: 5, si: 16,
       yardages: { Yellow: 524, White: 493, Blue: 490, Red: 414 },
       tee: { lat: -33.7516630050653, lng: 18.45300525426865 },
       green: {
@@ -82,7 +82,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 7, par: 4, si: 1,
+      number: 7, par: 4, si: 4,
       yardages: { Yellow: 445, White: 421, Blue: 399, Red: 312 },
       tee: { lat: -33.7472707086024, lng: 18.45173388719559 },
       green: {
@@ -93,7 +93,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 8, par: 3, si: 15,
+      number: 8, par: 3, si: 18,
       yardages: { Yellow: 156, White: 141, Blue: 129, Red: 118 },
       tee: { lat: -33.743357709842456, lng: 18.453450500965122 },
       green: {
@@ -104,7 +104,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 9, par: 4, si: 9,
+      number: 9, par: 4, si: 12,
       yardages: { Yellow: 408, White: 378, Blue: 357, Red: 270 },
       tee: { lat: -33.74327324453153, lng: 18.45165073871613 },
       green: {
@@ -115,7 +115,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 10, par: 5, si: 4,
+      number: 10, par: 5, si: 11,
       yardages: { Yellow: 533, White: 506, Blue: 504, Red: 487 },
       tee: { lat: -33.73859576717051, lng: 18.45245942473412 },
       green: {
@@ -126,7 +126,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 11, par: 4, si: 10,
+      number: 11, par: 4, si: 5,
       yardages: { Yellow: 396, White: 389, Blue: 355, Red: 344 },
       tee: { lat: -33.734225267912244, lng: 18.4505470097065 },
       green: {
@@ -137,7 +137,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 12, par: 4, si: 8,
+      number: 12, par: 4, si: 7,
       yardages: { Yellow: 398, White: 367, Blue: 366, Red: 361 },
       tee: { lat: -33.73667837070875, lng: 18.447461128234867 },
       green: {
@@ -148,7 +148,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 13, par: 5, si: 2,
+      number: 13, par: 5, si: 1,
       yardages: { Yellow: 536, White: 519, Blue: 443, Red: 407 },
       tee: { lat: -33.734345181869585, lng: 18.444714546203617 },
       green: {
@@ -159,7 +159,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 14, par: 3, si: 16,
+      number: 14, par: 3, si: 13,
       yardages: { Yellow: 177, White: 171, Blue: 142, Red: 138 },
       tee: { lat: -33.73916245000676, lng: 18.44454422593117 },
       green: {
@@ -170,7 +170,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 15, par: 4, si: 14,
+      number: 15, par: 4, si: 9,
       yardages: { Yellow: 405, White: 382, Blue: 262, Red: 259 },
       tee: { lat: -33.74096246760632, lng: 18.444175422191623 },
       green: {
@@ -181,7 +181,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 16, par: 3, si: 18,
+      number: 16, par: 3, si: 17,
       yardages: { Yellow: 168, White: 164, Blue: 137, Red: 132 },
       tee: { lat: -33.74313829951082, lng: 18.44771727919579 },
       green: {
@@ -192,7 +192,7 @@ const COURSE_DATA = {
       hazards: []
     },
     {
-      number: 17, par: 4, si: 6,
+      number: 17, par: 4, si: 3,
       yardages: { Yellow: 439, White: 425, Blue: 406, Red: 343 },
       tee: { lat: -33.7419347883533, lng: 18.448469638824466 },
       green: {
@@ -206,7 +206,7 @@ const COURSE_DATA = {
       ]
     },
     {
-      number: 18, par: 4, si: 12,
+      number: 18, par: 4, si: 15,
       yardages: { Yellow: 320, White: 294, Blue: 273, Red: 259 },
       tee: { lat: -33.737987144640385, lng: 18.449330627918247 },
       green: {
