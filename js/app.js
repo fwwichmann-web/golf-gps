@@ -327,7 +327,8 @@ const App = {
 
   _handleMarkShot() {
     if (!ShotTracker.hasActiveRound()) {
-      ShotTracker.startRound(this.currentTee);
+      this._openNewRoundModal();
+      return;
     }
     if (ShotTracker.round) {
       ShotTracker.round.currentHole = this.currentHole;
@@ -819,16 +820,84 @@ const App = {
     if (ShotTracker.hasActiveRound()) {
       if (!confirm('End current round and start a new one?')) return;
       ShotTracker.endRound();
+      this._stopPaceTimer();
     }
+    this._openNewRoundModal();
+  },
+
+  _openNewRoundModal() {
+    const modal = document.getElementById('new-round-modal');
+    const teeSelect = document.getElementById('nr-tee');
+    teeSelect.value = this.currentTee;
+
+    // Pre-fill with saved players
+    this._renderNewRoundPlayers(Storage.getPlayers());
+
+    document.getElementById('nr-add-player').onclick = () => {
+      const rows = document.querySelectorAll('.nr-player-row');
+      if (rows.length >= 4) { alert('Maximum 4 players'); return; }
+      const players = this._getNewRoundPlayers();
+      players.push({ name: 'Player ' + (players.length + 1), handicap: 0 });
+      this._renderNewRoundPlayers(players);
+    };
+
+    document.getElementById('nr-cancel').onclick = () => {
+      modal.classList.add('hidden');
+    };
+
+    document.getElementById('nr-start').onclick = () => {
+      const players = this._getNewRoundPlayers();
+      if (players.length === 0) { alert('Add at least one player'); return; }
+      this.currentTee = teeSelect.value;
+      Storage.setSetting('tee', this.currentTee);
+      Storage.savePlayers(players);
+      modal.classList.add('hidden');
+      this._launchRound();
+    };
+
+    modal.classList.remove('hidden');
+  },
+
+  _renderNewRoundPlayers(players) {
+    const list = document.getElementById('nr-player-list');
+    list.innerHTML = players.map((p, i) =>
+      '<div class="nr-player-row" style="display:flex;gap:8px;align-items:center;">' +
+        '<input class="nr-name player-name-input" type="text" placeholder="Name" value="' + p.name + '" style="flex:2;">' +
+        '<input class="nr-hcp player-hcp-input" type="number" placeholder="HCP" value="' + p.handicap + '" min="0" max="54" style="flex:1;width:60px;">' +
+        (players.length > 1
+          ? '<button class="nr-remove player-delete-btn" data-i="' + i + '">✕</button>'
+          : '<span style="width:28px;"></span>') +
+      '</div>'
+    ).join('');
+
+    list.querySelectorAll('.nr-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const players = this._getNewRoundPlayers();
+        players.splice(parseInt(btn.dataset.i), 1);
+        this._renderNewRoundPlayers(players);
+      });
+    });
+  },
+
+  _getNewRoundPlayers() {
+    return Array.from(document.querySelectorAll('.nr-player-row')).map(row => ({
+      name: (row.querySelector('.nr-name').value || 'Player').trim(),
+      handicap: Math.max(0, Math.min(54, parseInt(row.querySelector('.nr-hcp').value) || 0))
+    }));
+  },
+
+  _launchRound() {
     this.currentHole = 1;
     this.scoringHole = 1;
     ShotTracker.startRound(this.currentTee);
     const players = Storage.getPlayers();
     this.currentHoleScores = players.map(() => ({ strokes: 0, putts: 0 }));
+    Storage.clearLiveScores();
     this._renderHoleInfo();
     this._renderScoringScreen();
     this._renderScorecard();
-    this._showScreen('screen-gps');
+    this._startPaceTimer();
+    this._showScreen('screen-tracker');
   },
 
   _shareRound() {

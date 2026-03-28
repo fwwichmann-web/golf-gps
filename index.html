@@ -181,6 +181,29 @@
   </div>
 </div>
 
+<!-- New Round Modal -->
+<div id="new-round-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span>New Round</span>
+    </div>
+    <label style="margin-top:4px;">Tee</label>
+    <select id="nr-tee" style="width:100%;margin-bottom:12px;">
+      <option value="Yellow">Yellow (Championship)</option>
+      <option value="White" selected>White (Club)</option>
+      <option value="Blue">Blue (Member)</option>
+      <option value="Red">Red (Ladies)</option>
+    </select>
+    <label>Players</label>
+    <div id="nr-player-list" style="display:flex;flex-direction:column;gap:8px;margin:8px 0;"></div>
+    <button id="nr-add-player" class="btn-secondary" style="width:100%;margin-bottom:12px;">+ Add Player</button>
+    <div style="display:flex;gap:8px;">
+      <button id="nr-cancel" class="btn-secondary" style="flex:1">Cancel</button>
+      <button id="nr-start" class="btn-primary" style="flex:1">START ROUND</button>
+    </div>
+  </div>
+</div>
+
 <!-- Score Edit Modal -->
 <div id="score-edit-modal" class="modal hidden">
   <div class="modal-content">
