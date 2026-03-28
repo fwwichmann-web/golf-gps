@@ -270,12 +270,21 @@ const App = {
   _loadHoleScores() {
     if (!ShotTracker.round) return;
     const hole = ShotTracker.round.holes[this.scoringHole - 1];
-    if (!hole || !hole.playerScores) return;
-    hole.playerScores.forEach((ps, i) => {
-      if (this.currentHoleScores[i]) {
-        this.currentHoleScores[i] = { strokes: ps.strokes || 0, putts: ps.putts || 0 };
-      }
-    });
+    if (!hole) return;
+    if (hole.playerScores) {
+      hole.playerScores.forEach((ps, i) => {
+        if (this.currentHoleScores[i]) {
+          this.currentHoleScores[i] = { strokes: ps.strokes || 0, putts: ps.putts || 0 };
+        }
+      });
+    }
+    // Restore scramble score when navigating between holes
+    if ((ShotTracker.round.format || '').startsWith('scramble')) {
+      const cs = hole.competitionScore;
+      this.scrambleHoleScore = cs
+        ? { strokes: cs.strokes || 0, putts: cs.putts || 0 }
+        : { strokes: 0, putts: 0 };
+    }
   },
 
   _bindShotTracker() {
@@ -1531,7 +1540,7 @@ const App = {
       if (h.playerScores) {
         h.playerScores.forEach(ps => {
           const d = ps.strokes - h.par;
-          const cls = d <= -2 ? 'score-eagle' : d === -1 ? 'score-birdie' : d === 0 ? 'score-par' : d === 1 ? 'score-bogey' : 'score-double';
+          const cls = d <= -2 ? 'score-eagle' : d === -1 ? 'score-birdie' : d === 0 ? 'score-par' : d === 1 ? 'score-bogey' : d === 2 ? 'score-double' : 'score-triple';
           html += '<td><span class="' + cls + '">' + ps.strokes + '</span></td><td>' + (ps.stablefordPoints || 0) + '</td>';
         });
       } else {
