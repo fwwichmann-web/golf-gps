@@ -553,7 +553,7 @@ const App = {
     const players = ShotTracker.round.players || Storage.getPlayers();
 
     // Build header
-    let html = '<table><tr><th>H</th><th>Par</th>';
+    let html = '<table><tr><th>H</th><th>Par</th><th>SI</th>';
     players.forEach(p => {
       html += '<th>' + p.name.substring(0, 4) + '</th><th>Pts</th>';
     });
@@ -569,7 +569,7 @@ const App = {
       const h = ShotTracker.round.holes[i];
       if (i === 9) {
         // OUT totals row
-        html += '<tr><td><b>OUT</b></td><td><b>' + frontPar + '</b></td>';
+        html += '<tr><td><b>OUT</b></td><td><b>' + frontPar + '</b></td><td></td>';
         players.forEach((_, pi) => {
           html += '<td><b>' + (playerFrontStrokes[pi] || '-') + '</b></td>' +
                   '<td><b>' + (playerFrontPts[pi] || '-') + '</b></td>';
@@ -582,7 +582,7 @@ const App = {
       const isCurrentHole = (h.number === this.scoringHole);
       const liveScores = isCurrentHole ? this.currentHoleScores : null;
       const rowCls = isCurrentHole ? ' class="scorecard-current-hole"' : '';
-      html += '<tr' + rowCls + '><td>' + h.number + '</td><td>' + h.par + '</td>';
+      html += '<tr' + rowCls + '><td>' + h.number + '</td><td>' + h.par + '</td><td class="si-col">' + h.si + '</td>';
       if (h.completed && h.playerScores) {
         h.playerScores.forEach((ps, pi) => {
           const diff = ps.strokes - h.par;
@@ -612,7 +612,7 @@ const App = {
     }
 
     // IN totals
-    html += '<tr><td><b>IN</b></td><td><b>' + backPar + '</b></td>';
+    html += '<tr><td><b>IN</b></td><td><b>' + backPar + '</b></td><td></td>';
     players.forEach((_, pi) => {
       html += '<td><b>' + (playerBackStrokes[pi] || '-') + '</b></td>' +
               '<td><b>' + (playerBackPts[pi] || '-') + '</b></td>';
@@ -620,7 +620,7 @@ const App = {
     html += '</tr>';
 
     // TOTAL row
-    html += '<tr><td><b>TOT</b></td><td><b>' + (frontPar + backPar) + '</b></td>';
+    html += '<tr><td><b>TOT</b></td><td><b>' + (frontPar + backPar) + '</b></td><td></td>';
     players.forEach((_, pi) => {
       const totStr = (playerFrontStrokes[pi] + playerBackStrokes[pi]) || '-';
       const totPts = (playerFrontPts[pi] + playerBackPts[pi]) || '-';
@@ -647,7 +647,7 @@ const App = {
     if (infoEl) infoEl.textContent = round ? (round.tee + ' Tees · ' + new Date(round.date).toLocaleDateString()) : 'Start a round to see scores';
 
     // Player header strip
-    headersEl.innerHTML = '<div class="sc-ph-hole">H</div><div class="sc-ph-par">Par</div>' +
+    headersEl.innerHTML = '<div class="sc-ph-hole">H</div><div class="sc-ph-par">Par</div><div class="sc-ph-si">SI</div>' +
       players.map(p => '<div class="sc-ph-player">' + p.name.substring(0, 6) + '</div>').join('');
 
     // Accumulators
@@ -673,7 +673,7 @@ const App = {
       // OUT row between 9 and 10
       if (i === 9) {
         holesHtml += '<div class="sc-subtotal-row">' +
-          '<div class="sc-hole-num">OUT</div><div class="sc-hole-par">' + frontPar + '</div>' +
+          '<div class="sc-hole-num">OUT</div><div class="sc-hole-par">' + frontPar + '</div><div class="sc-hole-si"></div>' +
           players.map((_, pi) => {
             const s = f9Strokes[pi], p = f9Pts[pi];
             return '<div class="sc-hole-score">' + (s || '-') + '<span class="sc-pts-inline">' + (s ? p : '') + '</span></div>';
@@ -686,7 +686,8 @@ const App = {
 
       holesHtml += '<div class="' + rowCls + '">' +
         '<div class="sc-hole-num">' + hNum + '</div>' +
-        '<div class="sc-hole-par">' + hPar + '</div>';
+        '<div class="sc-hole-par">' + hPar + '</div>' +
+        '<div class="sc-hole-si">' + hSi + '</div>';
 
       if (round && h.completed && h.playerScores) {
         h.playerScores.forEach((ps, pi) => {
@@ -716,7 +717,7 @@ const App = {
 
     // IN row
     holesHtml += '<div class="sc-subtotal-row">' +
-      '<div class="sc-hole-num">IN</div><div class="sc-hole-par">' + backPar + '</div>' +
+      '<div class="sc-hole-num">IN</div><div class="sc-hole-par">' + backPar + '</div><div class="sc-hole-si"></div>' +
       players.map((_, pi) => {
         const s = b9Strokes[pi], p = b9Pts[pi];
         return '<div class="sc-hole-score">' + (s || '-') + '<span class="sc-pts-inline">' + (s ? p : '') + '</span></div>';
@@ -727,7 +728,7 @@ const App = {
 
     // TOTAL row
     totalsEl.innerHTML = '<div class="sc-total-row">' +
-      '<div class="sc-hole-num">TOT</div><div class="sc-hole-par">' + (frontPar + backPar) + '</div>' +
+      '<div class="sc-hole-num">TOT</div><div class="sc-hole-par">' + (frontPar + backPar) + '</div><div class="sc-hole-si"></div>' +
       players.map((_, pi) => {
         const s = totStrokes[pi], p = totPts[pi];
         const diff = s > 0 ? s - (frontPar + backPar) : null;

@@ -371,6 +371,7 @@ html, body {
   color: var(--text-secondary);
   font-size: 10px;
 }
+.si-col { color: var(--text-muted); font-size: 10px; }
 /* Score colour coding — traditional golf card style */
 .score-eagle  { background: #f5c518; color: #000; font-weight: 700; border-radius: 50%; width: 24px; height: 24px; line-height: 24px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
 .score-birdie { background: #e53935; color: #fff; font-weight: 600; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
@@ -968,6 +969,7 @@ html, body {
 }
 .sc-ph-hole   { width: 32px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; }
 .sc-ph-par    { width: 32px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.sc-ph-si     { width: 28px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; }
 .sc-ph-player { flex: 1; font-size: 12px; font-weight: 700; text-align: center; color: var(--accent-green); overflow: hidden; text-overflow: ellipsis; }
 
 .sc-holes { overflow-y: auto; }
@@ -994,6 +996,7 @@ html, body {
 
 .sc-hole-num  { width: 32px; font-size: 14px; font-weight: 700; text-align: center; color: var(--text-muted); }
 .sc-hole-par  { width: 32px; font-size: 14px; text-align: center; color: var(--text-muted); }
+.sc-hole-si   { width: 28px; font-size: 12px; text-align: center; color: var(--text-muted); }
 .sc-hole-score {
   flex: 1;
   display: flex;
