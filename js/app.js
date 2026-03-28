@@ -258,7 +258,7 @@ const App = {
             }
           });
         }
-        if (live.scrambleScore && ShotTracker.round.format === 'scramble') {
+        if (live.scrambleScore && (ShotTracker.round.format || '').startsWith('scramble')) {
           this.scrambleHoleScore = live.scrambleScore;
         }
       }
@@ -391,7 +391,7 @@ const App = {
     document.getElementById('score-hole-label').textContent = 'Hole ' + this.scoringHole;
     document.getElementById('score-hole-sub').textContent = 'Par ' + hole.par + ' · SI ' + hole.si;
 
-    if (format === 'scramble') {
+    if (format.startsWith('scramble')) {
       this._renderScrambleCard(players, hole);
       this._renderCompetitionScore();
       this._updateShotsBadge();
@@ -479,6 +479,7 @@ const App = {
 
   _renderScrambleCard(players, hole) {
     const container = document.getElementById('player-score-cards');
+    const format = (ShotTracker.round && ShotTracker.round.format) || 'scramble2';
     const s = this.scrambleHoleScore;
     const teamHcp = (ShotTracker.round && ShotTracker.round.teamHandicap) || 0;
     const pts = Scoring.stablefordPoints(s.strokes, hole.par, hole.si, teamHcp);
@@ -489,7 +490,7 @@ const App = {
     const playerNames = players.map(p => p.name).join(' · ');
 
     container.innerHTML =
-      '<div class="scramble-banner">SCRAMBLE — play from best shot</div>' +
+      '<div class="scramble-banner">' + (format === 'scramble2' ? '2-PLAYER' : '4-PLAYER') + ' SCRAMBLE — play from best shot</div>' +
       '<div class="player-card">' +
         '<div class="player-card-header">' +
           '<span class="player-card-name">Team</span>' +
@@ -546,7 +547,7 @@ const App = {
     const players = (ShotTracker.round && ShotTracker.round.players) || Storage.getPlayers();
     const holes = ShotTracker.round ? ShotTracker.round.holes : [];
 
-    if (format === 'scramble') {
+    if (format.startsWith('scramble')) {
       const teamHcp = (ShotTracker.round && ShotTracker.round.teamHandicap) || 0;
       let totalStrokes = 0, totalPar = 0, totalPts = 0, holesPlayed = 0;
       for (const h of holes) {
@@ -569,7 +570,7 @@ const App = {
       const diff = totalStrokes > 0 ? totalStrokes - totalPar : null;
       const diffStr = diff === null ? '—' : diff === 0 ? 'E' : (diff > 0 ? '+' + diff : '' + diff);
       const diffCls = diff === null ? '' : diff < 0 ? 'comp-under' : diff > 0 ? 'comp-over' : '';
-      document.getElementById('comp-label').textContent = 'SCRAMBLE SCORE';
+      document.getElementById('comp-label').textContent = format === 'scramble2' ? 'SCRAMBLE (2-PLAYER)' : 'SCRAMBLE (4-PLAYER)';
       compLb.innerHTML =
         '<div class="comp-team-row">' +
           '<span class="comp-team-label">Team</span>' +
@@ -661,7 +662,7 @@ const App = {
 
     // Save competition score based on format
     const format = (ShotTracker.round && ShotTracker.round.format) || 'individual';
-    if (format === 'scramble') {
+    if (format.startsWith('scramble')) {
       const teamHcp = (ShotTracker.round && ShotTracker.round.teamHandicap) || 0;
       const pts = Scoring.stablefordPoints(this.scrambleHoleScore.strokes, hole.par, hole.si, teamHcp) || 0;
       ShotTracker.round.holes[this.scoringHole - 1].competitionScore = {
@@ -1042,10 +1043,12 @@ const App = {
     teeSelect.value = this.currentTee;
 
     const fmtSelect = document.getElementById('nr-format');
-    fmtSelect.value = Storage.getSetting('format', 'individual');
+    const savedFmt = Storage.getSetting('format', 'individual');
+    fmtSelect.value = fmtSelect.querySelector('[value="' + savedFmt + '"]') ? savedFmt : 'individual';
     const hints = {
       individual: 'Each player records their own score. Stableford calculated on handicap.',
-      scramble: 'All play from the best shot. One team score per hole. Team HCP = sum ÷ 8.',
+      scramble2: '2-player team. Both play from the best shot each time. Team HCP = sum ÷ 4.',
+      scramble4: '4-player team. All play from the best shot each time. Team HCP = sum ÷ 8.',
       betterball2: 'Teams of 2. Best stableford score from each pair counts per hole.',
       betterball4: 'All players. Best stableford score of the group counts per hole.'
     };
@@ -1119,9 +1122,10 @@ const App = {
     ShotTracker.startRound(this.currentTee);
     const players = Storage.getPlayers();
     ShotTracker.round.format = format;
-    if (format === 'scramble') {
+    if (format.startsWith('scramble')) {
       const sum = players.reduce((s, p) => s + (p.handicap || 0), 0);
-      ShotTracker.round.teamHandicap = Math.round(sum / (players.length >= 4 ? 8 : 4));
+      const divisor = format === 'scramble4' ? 8 : 4;
+      ShotTracker.round.teamHandicap = Math.round(sum / divisor);
     }
     ShotTracker._save();
     this.currentHoleScores = players.map(() => ({ strokes: 0, putts: 0 }));
