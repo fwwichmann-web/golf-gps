@@ -120,6 +120,12 @@
     </div>
   </details>
 
+  <!-- Competition Score (non-individual formats) -->
+  <div id="comp-section" class="hidden">
+    <div class="section-label" id="comp-label">COMPETITION</div>
+    <div id="comp-leaderboard" class="comp-leaderboard"></div>
+  </div>
+
   <!-- Live Leaderboard -->
   <div class="section-label">LEADERBOARD</div>
   <div id="live-leaderboard" class="live-leaderboard"></div>
@@ -194,7 +200,15 @@
       <option value="Blue">Blue (Member)</option>
       <option value="Red">Red (Ladies)</option>
     </select>
-    <label>Players</label>
+    <label>Competition Format</label>
+    <select id="nr-format" style="width:100%;margin-bottom:4px;">
+      <option value="individual">Individual Stableford</option>
+      <option value="scramble">American Scramble</option>
+      <option value="betterball2">Better Ball — 2 per team</option>
+      <option value="betterball4">Better Ball — 4 per team</option>
+    </select>
+    <div id="nr-format-hint" class="nr-format-hint"></div>
+    <label style="margin-top:10px;">Players</label>
     <div id="nr-player-list" style="display:flex;flex-direction:column;gap:8px;margin:8px 0;"></div>
     <button id="nr-add-player" class="btn-secondary" style="width:100%;margin-bottom:12px;">+ Add Player</button>
     <div style="display:flex;gap:8px;">

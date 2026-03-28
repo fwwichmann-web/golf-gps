@@ -8,6 +8,7 @@ const App = {
   scoringHole: 1,
   currentHoleScores: [],   // [{strokes, putts}, ...] — one per player, unsaved
   _paceTimer: null,
+  scrambleHoleScore: { strokes: 0, putts: 0 },
 
   init() {
     // Load settings
@@ -249,12 +250,17 @@ const App = {
       this._loadHoleScores();
       // Restore in-progress hole scores that survived page reload (e.g. NFC tap)
       const live = Storage.getLiveScores();
-      if (live && live.holeNumber === this.scoringHole && live.scores) {
-        live.scores.forEach((s, i) => {
-          if (this.currentHoleScores[i]) {
-            this.currentHoleScores[i] = { strokes: s.strokes || 0, putts: s.putts || 0 };
-          }
-        });
+      if (live && live.holeNumber === this.scoringHole) {
+        if (live.scores) {
+          live.scores.forEach((s, i) => {
+            if (this.currentHoleScores[i]) {
+              this.currentHoleScores[i] = { strokes: s.strokes || 0, putts: s.putts || 0 };
+            }
+          });
+        }
+        if (live.scrambleScore && ShotTracker.round.format === 'scramble') {
+          this.scrambleHoleScore = live.scrambleScore;
+        }
       }
     } else {
       this.scoringHole = 1;
@@ -377,9 +383,21 @@ const App = {
   },
 
   _renderScoringScreen() {
+    const format = (ShotTracker.round && ShotTracker.round.format) || 'individual';
     const players = Storage.getPlayers();
     const hole = CourseData.getHole(this.scoringHole);
     if (!hole) return;
+
+    document.getElementById('score-hole-label').textContent = 'Hole ' + this.scoringHole;
+    document.getElementById('score-hole-sub').textContent = 'Par ' + hole.par + ' · SI ' + hole.si;
+
+    if (format === 'scramble') {
+      this._renderScrambleCard(players, hole);
+      this._renderCompetitionScore();
+      this._updateShotsBadge();
+      this._updateShotList();
+      return;
+    }
 
     // Ensure scores array matches player count
     while (this.currentHoleScores.length < players.length) {
@@ -433,12 +451,14 @@ const App = {
         this._updatePlayerCardLive(pi, players[pi], hole);
         Storage.saveLiveScores(this.scoringHole, this.currentHoleScores);
         this._renderScorecard();
+        if (format !== 'individual') this._renderCompetitionScore();
         if (navigator.vibrate) navigator.vibrate(20);
       });
     });
 
     this._updateShotsBadge();
     this._updateShotList();
+    if (format !== 'individual') this._renderCompetitionScore();
   },
 
   _updatePlayerCardLive(pi, player, hole) {
@@ -457,6 +477,172 @@ const App = {
     }
   },
 
+  _renderScrambleCard(players, hole) {
+    const container = document.getElementById('player-score-cards');
+    const s = this.scrambleHoleScore;
+    const teamHcp = (ShotTracker.round && ShotTracker.round.teamHandicap) || 0;
+    const pts = Scoring.stablefordPoints(s.strokes, hole.par, hole.si, teamHcp);
+    const ptsLabel = pts !== null ? pts + ' pts' : '— pts';
+    const ptsCls = pts !== null ? 'player-card-pts pts-' + pts : 'player-card-pts';
+    const received = Scoring.strokesReceived(teamHcp, hole.si);
+    const hcpLabel = 'Team HCP ' + teamHcp + (received > 0 ? ' (+' + received + ')' : '');
+    const playerNames = players.map(p => p.name).join(' · ');
+
+    container.innerHTML =
+      '<div class="scramble-banner">SCRAMBLE — play from best shot</div>' +
+      '<div class="player-card">' +
+        '<div class="player-card-header">' +
+          '<span class="player-card-name">Team</span>' +
+          '<span class="player-card-hcp">' + hcpLabel + '</span>' +
+          '<span class="' + ptsCls + '" id="score-pts-team">' + ptsLabel + '</span>' +
+        '</div>' +
+        '<div class="player-card-sub">' + playerNames + '</div>' +
+        '<div class="player-card-row">' +
+          '<span class="player-card-label">Strokes</span>' +
+          '<div class="counter-group">' +
+            '<button class="counter-btn scramble-counter" data-field="strokes" data-delta="-1">−</button>' +
+            '<span class="counter-value" id="scramble-strokes">' + s.strokes + '</span>' +
+            '<button class="counter-btn scramble-counter" data-field="strokes" data-delta="1">+</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="player-card-row">' +
+          '<span class="player-card-label">Putts</span>' +
+          '<div class="counter-group">' +
+            '<button class="counter-btn scramble-counter" data-field="putts" data-delta="-1">−</button>' +
+            '<span class="counter-value" id="scramble-putts">' + s.putts + '</span>' +
+            '<button class="counter-btn scramble-counter" data-field="putts" data-delta="1">+</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    container.querySelectorAll('.scramble-counter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const field = btn.dataset.field;
+        const delta = parseInt(btn.dataset.delta);
+        this.scrambleHoleScore[field] = Math.max(0, this.scrambleHoleScore[field] + delta);
+        document.getElementById('scramble-' + field).textContent = this.scrambleHoleScore[field];
+        const newPts = Scoring.stablefordPoints(this.scrambleHoleScore.strokes, hole.par, hole.si, teamHcp);
+        const ptsEl = document.getElementById('score-pts-team');
+        if (ptsEl) {
+          ptsEl.textContent = newPts !== null ? newPts + ' pts' : '— pts';
+          ptsEl.className = newPts !== null ? 'player-card-pts pts-' + newPts : 'player-card-pts';
+        }
+        Storage.saveLiveScores(this.scoringHole, this.currentHoleScores, this.scrambleHoleScore);
+        this._renderCompetitionScore();
+        if (navigator.vibrate) navigator.vibrate(20);
+      });
+    });
+  },
+
+  _renderCompetitionScore() {
+    const compSection = document.getElementById('comp-section');
+    const compLb = document.getElementById('comp-leaderboard');
+    if (!compSection || !compLb) return;
+    const format = (ShotTracker.round && ShotTracker.round.format) || 'individual';
+
+    if (format === 'individual') { compSection.classList.add('hidden'); return; }
+    compSection.classList.remove('hidden');
+
+    const players = (ShotTracker.round && ShotTracker.round.players) || Storage.getPlayers();
+    const holes = ShotTracker.round ? ShotTracker.round.holes : [];
+
+    if (format === 'scramble') {
+      const teamHcp = (ShotTracker.round && ShotTracker.round.teamHandicap) || 0;
+      let totalStrokes = 0, totalPar = 0, totalPts = 0, holesPlayed = 0;
+      for (const h of holes) {
+        if (h.completed && h.competitionScore) {
+          totalStrokes += h.competitionScore.strokes || 0;
+          totalPar += h.par;
+          totalPts += h.competitionScore.stablefordPoints || 0;
+          holesPlayed++;
+        }
+      }
+      if (this.scrambleHoleScore.strokes > 0) {
+        const ch = CourseData.getHole(this.scoringHole);
+        if (ch) {
+          totalStrokes += this.scrambleHoleScore.strokes;
+          totalPar += ch.par;
+          totalPts += Scoring.stablefordPoints(this.scrambleHoleScore.strokes, ch.par, ch.si, teamHcp) || 0;
+          holesPlayed++;
+        }
+      }
+      const diff = totalStrokes > 0 ? totalStrokes - totalPar : null;
+      const diffStr = diff === null ? '—' : diff === 0 ? 'E' : (diff > 0 ? '+' + diff : '' + diff);
+      const diffCls = diff === null ? '' : diff < 0 ? 'comp-under' : diff > 0 ? 'comp-over' : '';
+      document.getElementById('comp-label').textContent = 'SCRAMBLE SCORE';
+      compLb.innerHTML =
+        '<div class="comp-team-row">' +
+          '<span class="comp-team-label">Team</span>' +
+          '<span class="comp-team-diff ' + diffCls + '">' + diffStr + '</span>' +
+          '<span class="comp-team-pts">' + totalPts + ' pts</span>' +
+          (holesPlayed > 0 ? '<span class="comp-team-thru">Thru ' + holesPlayed + '</span>' : '') +
+        '</div>';
+
+    } else if (format === 'betterball2') {
+      document.getElementById('comp-label').textContent = 'BETTER BALL — 2s';
+      const teams = [
+        { name: 'Team A', idxs: [0, 1], key: 'teamAPts' },
+        { name: 'Team B', idxs: [2, 3], key: 'teamBPts' }
+      ];
+      const ch = CourseData.getHole(this.scoringHole);
+      const teamScores = teams.map(t => {
+        let pts = 0, holesPlayed = 0;
+        for (const h of holes) {
+          if (h.completed && h.competitionScore) {
+            pts += h.competitionScore[t.key] || 0;
+            holesPlayed++;
+          }
+        }
+        if (ch) {
+          let liveBest = 0;
+          t.idxs.forEach(pi => {
+            const s = this.currentHoleScores[pi];
+            if (s && s.strokes > 0) {
+              const p = players[pi];
+              liveBest = Math.max(liveBest, Scoring.stablefordPoints(s.strokes, ch.par, ch.si, p ? p.handicap : 0) || 0);
+            }
+          });
+          if (liveBest > 0) { pts += liveBest; holesPlayed++; }
+        }
+        return { name: t.name, pts, holesPlayed };
+      });
+      teamScores.sort((a, b) => b.pts - a.pts);
+      compLb.innerHTML = teamScores.map((t, idx) =>
+        '<div class="comp-team-row ' + (idx === 0 && t.pts > 0 ? 'comp-team-leading' : '') + '">' +
+          '<span class="comp-team-label">' + t.name + '</span>' +
+          '<span class="comp-team-pts">' + t.pts + ' pts</span>' +
+          (t.holesPlayed > 0 ? '<span class="comp-team-thru">Thru ' + t.holesPlayed + '</span>' : '') +
+        '</div>'
+      ).join('');
+
+    } else if (format === 'betterball4') {
+      document.getElementById('comp-label').textContent = 'BETTER BALL — 4s';
+      let totalPts = 0, holesPlayed = 0;
+      for (const h of holes) {
+        if (h.completed && h.competitionScore) {
+          totalPts += h.competitionScore.bestPts || 0;
+          holesPlayed++;
+        }
+      }
+      const ch = CourseData.getHole(this.scoringHole);
+      if (ch) {
+        let liveBest = 0;
+        this.currentHoleScores.forEach((s, pi) => {
+          if (s && s.strokes > 0) {
+            liveBest = Math.max(liveBest, Scoring.stablefordPoints(s.strokes, ch.par, ch.si, players[pi] ? players[pi].handicap : 0) || 0);
+          }
+        });
+        if (liveBest > 0) { totalPts += liveBest; holesPlayed++; }
+      }
+      compLb.innerHTML =
+        '<div class="comp-team-row">' +
+          '<span class="comp-team-label">Team Best Ball</span>' +
+          '<span class="comp-team-pts">' + totalPts + ' pts</span>' +
+          (holesPlayed > 0 ? '<span class="comp-team-thru">Thru ' + holesPlayed + '</span>' : '') +
+        '</div>';
+    }
+  },
+
   _handleSaveHole() {
     if (!ShotTracker.hasActiveRound()) {
       ShotTracker.startRound(this.currentTee);
@@ -472,6 +658,30 @@ const App = {
     }));
 
     ShotTracker.saveHoleScores(this.scoringHole, playerScores);
+
+    // Save competition score based on format
+    const format = (ShotTracker.round && ShotTracker.round.format) || 'individual';
+    if (format === 'scramble') {
+      const teamHcp = (ShotTracker.round && ShotTracker.round.teamHandicap) || 0;
+      const pts = Scoring.stablefordPoints(this.scrambleHoleScore.strokes, hole.par, hole.si, teamHcp) || 0;
+      ShotTracker.round.holes[this.scoringHole - 1].competitionScore = {
+        strokes: this.scrambleHoleScore.strokes,
+        putts: this.scrambleHoleScore.putts,
+        stablefordPoints: pts
+      };
+      ShotTracker._save();
+      this.scrambleHoleScore = { strokes: 0, putts: 0 };
+    } else if (format === 'betterball2') {
+      const tA = Math.max(0, ...playerScores.slice(0, 2).map(ps => ps.stablefordPoints || 0));
+      const tB = playerScores.length > 2 ? Math.max(0, ...playerScores.slice(2).map(ps => ps.stablefordPoints || 0)) : 0;
+      ShotTracker.round.holes[this.scoringHole - 1].competitionScore = { teamAPts: tA, teamBPts: tB };
+      ShotTracker._save();
+    } else if (format === 'betterball4') {
+      const best = Math.max(0, ...playerScores.map(ps => ps.stablefordPoints || 0));
+      ShotTracker.round.holes[this.scoringHole - 1].competitionScore = { bestPts: best };
+      ShotTracker._save();
+    }
+
     Storage.clearLiveScores();
 
     if (this.scoringHole < 18) {
@@ -831,6 +1041,19 @@ const App = {
     const teeSelect = document.getElementById('nr-tee');
     teeSelect.value = this.currentTee;
 
+    const fmtSelect = document.getElementById('nr-format');
+    fmtSelect.value = Storage.getSetting('format', 'individual');
+    const hints = {
+      individual: 'Each player records their own score. Stableford calculated on handicap.',
+      scramble: 'All play from the best shot. One team score per hole. Team HCP = sum ÷ 8.',
+      betterball2: 'Teams of 2. Best stableford score from each pair counts per hole.',
+      betterball4: 'All players. Best stableford score of the group counts per hole.'
+    };
+    const hintEl = document.getElementById('nr-format-hint');
+    const updateHint = () => { hintEl.textContent = hints[fmtSelect.value] || ''; };
+    fmtSelect.onchange = updateHint;
+    updateHint();
+
     // Pre-fill with saved players
     this._renderNewRoundPlayers(Storage.getPlayers());
 
@@ -849,11 +1072,14 @@ const App = {
     document.getElementById('nr-start').onclick = () => {
       const players = this._getNewRoundPlayers();
       if (players.length === 0) { alert('Add at least one player'); return; }
+      const format = fmtSelect.value;
+      if (format === 'betterball2' && players.length < 2) { alert('Better Ball (2 per team) needs at least 2 players'); return; }
       this.currentTee = teeSelect.value;
       Storage.setSetting('tee', this.currentTee);
+      Storage.setSetting('format', format);
       Storage.savePlayers(players);
       modal.classList.add('hidden');
-      this._launchRound();
+      this._launchRound(format);
     };
 
     modal.classList.remove('hidden');
@@ -887,12 +1113,19 @@ const App = {
     }));
   },
 
-  _launchRound() {
+  _launchRound(format = 'individual') {
     this.currentHole = 1;
     this.scoringHole = 1;
     ShotTracker.startRound(this.currentTee);
     const players = Storage.getPlayers();
+    ShotTracker.round.format = format;
+    if (format === 'scramble') {
+      const sum = players.reduce((s, p) => s + (p.handicap || 0), 0);
+      ShotTracker.round.teamHandicap = Math.round(sum / (players.length >= 4 ? 8 : 4));
+    }
+    ShotTracker._save();
     this.currentHoleScores = players.map(() => ({ strokes: 0, putts: 0 }));
+    this.scrambleHoleScore = { strokes: 0, putts: 0 };
     Storage.clearLiveScores();
     this._renderHoleInfo();
     this._renderScoringScreen();

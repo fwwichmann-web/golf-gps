@@ -1118,6 +1118,54 @@ html, body {
   font-size: 10px;
 }
 
+/* === Competition Formats === */
+.nr-format-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 5px 8px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  margin-bottom: 10px;
+  line-height: 1.4;
+  min-height: 18px;
+}
+
+.scramble-banner {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent-orange);
+  text-transform: uppercase;
+  padding: 6px 0 4px;
+}
+
+.player-card-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 0 0 8px;
+  text-align: center;
+}
+
+.comp-leaderboard { margin: 4px 0 8px; display: flex; flex-direction: column; gap: 6px; }
+
+.comp-team-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+}
+.comp-team-row.comp-team-leading { border-color: var(--accent-green); }
+.comp-team-label { flex: 1; font-weight: 600; font-size: 14px; }
+.comp-team-diff { font-size: 22px; font-weight: 700; min-width: 44px; text-align: center; }
+.comp-team-diff.comp-under { color: var(--accent-green); }
+.comp-team-diff.comp-over  { color: var(--accent-red); }
+.comp-team-pts { font-size: 16px; font-weight: 700; color: var(--accent-green); }
+.comp-team-thru { font-size: 11px; color: var(--text-muted); }
+
 /* === NFC === */
 .nfc-active-bar {
   display: flex;
