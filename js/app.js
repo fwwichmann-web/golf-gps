@@ -57,6 +57,7 @@ const App = {
     this._renderHoleInfo();
     this._renderScoringScreen();
     this._renderScorecard();
+    this._updateFinishSection();
 
     // Handle NFC URL tag after DOM is ready
     this._handleNfcUrlTag();
@@ -328,6 +329,15 @@ const App = {
         this.currentHoleScores = players.map(() => ({ strokes: 0, putts: 0 }));
         this._loadHoleScores();
         this._renderScoringScreen();
+      }
+    });
+
+    // Finish round / edit round buttons
+    document.getElementById('btn-finish-round').addEventListener('click', () => this._finishRound());
+    document.getElementById('btn-edit-round').addEventListener('click', () => {
+      if (ShotTracker.round) {
+        this._editIsActive = true;
+        this._openScoreEdit(ShotTracker.round);
       }
     });
 
@@ -741,11 +751,29 @@ const App = {
       this._renderScoringScreen();
       this._renderScorecard();
     } else {
-      const summary = ShotTracker.endRound();
-      this._stopPaceTimer();
-      this._renderSummary(summary);
-      this._showScreen('screen-summary');
+      this._renderHoleInfo();
+      this._renderScoringScreen();
+      this._renderScorecard();
     }
+    this._updateFinishSection();
+  },
+
+  _updateFinishSection() {
+    const round = ShotTracker.round;
+    if (!round) return;
+    const holesPlayed = round.holes.filter(h => h.completed).length;
+    const allDone = holesPlayed === 18;
+    const finishSection = document.getElementById('finish-round-section');
+    const editBtn = document.getElementById('btn-edit-round');
+    if (finishSection) finishSection.classList.toggle('hidden', !allDone);
+    if (editBtn) editBtn.classList.toggle('hidden', holesPlayed === 0);
+  },
+
+  _finishRound() {
+    const summary = ShotTracker.endRound();
+    this._stopPaceTimer();
+    this._renderSummary(summary);
+    this._showScreen('screen-summary');
   },
 
   _renderLiveLeaderboard() {
@@ -1183,6 +1211,7 @@ const App = {
     this._renderScorecard();
     this._startPaceTimer();
     this._showScreen('screen-tracker');
+    this._updateFinishSection();
   },
 
   _shareRound() {
@@ -1678,19 +1707,38 @@ const App = {
   },
 
   _finishScoreEdit() {
-    // Recalculate summary and persist
-    this._editRound.summary = (() => {
-      const saved = ShotTracker.round;
-      ShotTracker.round = this._editRound;
-      const s = ShotTracker.getRoundSummary();
-      ShotTracker.round = saved;
-      return s;
-    })();
-    Storage.saveRound(this._editRound);
-    document.getElementById('score-edit-modal').classList.add('hidden');
-    // Refresh the detail view with updated data
-    this._showRoundDetail(this._editRound);
-    this._renderHistory();
+    if (this._editIsActive) {
+      // Editing an active (in-progress) round — update live round data
+      this._editIsActive = false;
+      // Sync edited scores back into the active round holes
+      this._editRound.holes.forEach((h, i) => {
+        const edited = this._editScores[i];
+        if (edited) {
+          h.playerScores = edited.playerScores;
+          h.completed = edited.completed;
+        }
+      });
+      ShotTracker._save();
+      document.getElementById('score-edit-modal').classList.add('hidden');
+      // Reload current hole display
+      this._loadHoleScores();
+      this._renderScoringScreen();
+      this._renderScorecard();
+      this._updateFinishSection();
+    } else {
+      // Editing a completed round from history
+      this._editRound.summary = (() => {
+        const saved = ShotTracker.round;
+        ShotTracker.round = this._editRound;
+        const s = ShotTracker.getRoundSummary();
+        ShotTracker.round = saved;
+        return s;
+      })();
+      Storage.saveRound(this._editRound);
+      document.getElementById('score-edit-modal').classList.add('hidden');
+      this._showRoundDetail(this._editRound);
+      this._renderHistory();
+    }
   },
 
   // === NFC ===

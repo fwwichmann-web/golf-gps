@@ -1,4 +1,4 @@
-const CACHE_NAME = 'golf-gps-v5';
+const CACHE_NAME = 'golf-gps-v7';
 
 const APP_SHELL = [
   './',

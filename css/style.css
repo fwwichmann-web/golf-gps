@@ -256,6 +256,31 @@ html, body {
 }
 .btn-secondary:active { background: var(--border); }
 
+.round-actions-row {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px 0;
+  align-items: center;
+}
+.round-actions-row .btn-secondary {
+  flex: 1;
+  text-align: center;
+}
+.btn-finish-round {
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--accent-green);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+.btn-finish-round:active { opacity: 0.8; }
+#finish-round-section { flex: 1; }
+
 .btn-mark-shot { margin-top: 8px; }
 
 /* === Shot Tracker === */
