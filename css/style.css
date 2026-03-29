@@ -787,12 +787,10 @@ html, body {
   min-width: 52px;
   text-align: center;
 }
-.player-card-pts.pts-6 { background: #2a2000; color: #ffd740; font-weight: 800; }  /* Albatross */
-.player-card-pts.pts-5 { background: #1a3a1a; color: #00e676; font-weight: 800; }  /* Eagle */
-.player-card-pts.pts-4 { background: #1a2e1a; color: #69f0ae; }  /* Birdie */
-.player-card-pts.pts-3 { background: #1a1a2e; color: #448aff; }  /* Par */
-.player-card-pts.pts-2 { background: var(--bg-surface); color: var(--text-secondary); }  /* Bogey */
-.player-card-pts.pts-1 { background: var(--bg-surface); color: var(--text-muted); }  /* Double */
+.player-card-pts.pts-4 { background: #1a3a1a; color: #00e676; font-weight: 800; }  /* Eagle+ */
+.player-card-pts.pts-3 { background: #1a2e1a; color: #69f0ae; }  /* Birdie */
+.player-card-pts.pts-2 { background: #1a1a2e; color: #448aff; }  /* Par */
+.player-card-pts.pts-1 { background: var(--bg-surface); color: var(--text-secondary); }  /* Bogey */
 .player-card-pts.pts-0 { background: #2e1a1a; color: var(--accent-red); }  /* No pts */
 
 .player-card-row {

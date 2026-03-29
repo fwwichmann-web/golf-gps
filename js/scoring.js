@@ -16,25 +16,22 @@ const Scoring = {
    * Stableford points for a hole.
    * Returns 0 if strokes is 0 (not played).
    *
-   * Net -3 or better (albatross) = 6 pts
-   * Net -2 (eagle)               = 5 pts
-   * Net -1 (birdie)              = 4 pts
-   * Net par                      = 3 pts
-   * Net +1 (bogey)               = 2 pts
-   * Net +2 (double bogey)        = 1 pt
-   * Net +3 or worse              = 0 pts
+   * WHS standard stableford:
+   * Net -2 or better (eagle+) = 4 pts
+   * Net -1 (birdie)           = 3 pts
+   * Net par                   = 2 pts
+   * Net +1 (bogey)            = 1 pt
+   * Net +2 or worse           = 0 pts
    */
   stablefordPoints(strokes, par, si, handicap) {
     if (!strokes || strokes <= 0) return null;
     const received = this.strokesReceived(handicap, si);
     const net = strokes - received;
     const diff = net - par;
-    if (diff <= -3) return 6;
-    if (diff === -2) return 5;
-    if (diff === -1) return 4;
-    if (diff === 0)  return 3;
-    if (diff === 1)  return 2;
-    if (diff === 2)  return 1;
+    if (diff <= -2) return 4;
+    if (diff === -1) return 3;
+    if (diff === 0)  return 2;
+    if (diff === 1)  return 1;
     return 0;
   },
 
